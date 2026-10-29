@@ -9,15 +9,15 @@ Resumen de las suposiciones y de las decisiones de arquitectura. El detalle de c
 | ID | Tema | Suposición | Diagrama |
 |---|---|---|---|
 | S-01 | Región | `us-east-1` como región principal; la región de DR no se define. | — |
-| S-02 | Tráfico | ~10 mil solicitudes por minuto, picos de 3 a 5 veces; el autoescalado probablemente ya está configurado. | `4?` |
-| S-03 | Cómputo | Hasta 100 servicios en ECS; número de clusters, tipo de lanzamiento y balanceadores desconocidos. | `3?` `4?` |
-| S-04 | Bases de datos | Hasta 30 instancias de RDS con motores, tamaños, configuraciones y propósitos diversos. | `7?` |
-| S-05 | OpenSearch | Configuración y propósito (búsqueda o logs) desconocidos. | `6?` |
+| S-02 | Tráfico | ~10 mil solicitudes por minuto en promedio. Picos de 3 veces que duran una semana, cuatro veces al año (un mes de pico al año). El autoescalado probablemente ya está configurado. | `4?` |
+| S-03 | Cómputo | Hasta 100 servicios en ECS, con un promedio de 2 vCPU y 4 GB por servicio (cota superior), cada uno detrás de su propio ALB; número de clusters y tipo de lanzamiento desconocidos. | `3?` `4?` |
+| S-04 | Bases de datos | Hasta 30 instancias de RDS con motores y propósitos diversos. Para costos se promedian como instancias grandes en una sola zona (compensa bases medianas y bases Multi-AZ). | `7?` |
+| S-05 | OpenSearch | Dominio de unos 100 GB; configuración y propósito (búsqueda o logs) desconocidos. | `6?` |
 | S-06 | Temporal | Self-hosted en ECS en la misma cuenta; su persistencia es una de las bases de RDS. | `5?` `8?` |
 | S-07 | RTO / RPO | RTO de 1 hora para todo (por las dependencias entre sistemas) y RPO de 5 minutos; se espera una estrategia de DR. | — |
 | S-08 | Equipo | 10 ingenieros, con dos turnos de guardia 24/7 en varias zonas horarias. | `1?` |
 | S-09 | Cumplimiento | Aplica PCI DSS (Kova emite tarjetas) a través de un issuer-processor; la Ley 1581 de Habeas Data ya se cumple. | — |
-| S-10 | Secretos y llaves | Secretos en Secrets Manager / SSM; llaves de wallets en KMS o cifradas en un almacén existente, ubicación exacta desconocida. | `9?` `10?` `12?` |
+| S-10 | Secretos y llaves | Secretos en Secrets Manager / SSM. Las llaves de firma de wallets se guardan hoy en una base de RDS, no como llaves de KMS por wallet. | `9?` `10?` `12?` |
 | S-11 | Red | DNS, IPs públicas e IPs de salida en listas blancas de proveedores no cambian. | `11?` |
 | S-12 | VPN | Producto y proveedor desconocidos; da acceso de red a las VPCs. | `2?` |
 | S-13 | Observabilidad | APM actual: New Relic; se evalúan alternativas sin preferencia previa. | — |
@@ -25,6 +25,8 @@ Resumen de las suposiciones y de las decisiones de arquitectura. El detalle de c
 | S-15 | Código | El código vive en GitHub (o en su host actual). | — |
 | S-16 | Facturación | No hay acuerdos atados a la cuenta actual como pagadora que impidan unirla a una organización (se valida antes). | — |
 | S-17 | Wallets | El número de wallets es alto (miles o más), por lo que una llave de KMS por wallet no es viable en costo. | `10?` |
+| S-18 | Firmas | 10 millones de firmas de transacciones al mes. | — |
+| S-19 | Base de costos | Solo precios bajo demanda en USD: sin Spot, sin Savings Plans ni instancias reservadas, sin capa gratuita. Para estimar, todo se trata como producción. | — |
 
 ## Decisiones
 
@@ -54,7 +56,7 @@ Resumen de las suposiciones y de las decisiones de arquitectura. El detalle de c
 | [ADR-022](decisiones_full.md#adr-022-las-llaves-permanecen-en-la-cuenta-de-producción) | Ubicación de las llaves | Se quedan en producción | Las llaves de KMS no se mueven entre cuentas. |
 | [ADR-023](decisiones_full.md#adr-023-origen-de-las-llaves-conservar-importar-o-generar-fuera-e-importar) | Origen de las llaves | Conservar, importar o generar fuera e importar | Portabilidad, sin atarse a un proveedor. |
 | [ADR-024](decisiones_full.md#adr-024-secretos-de-configuración-en-secrets-manager-y-ssm) | Secretos | Secrets Manager y SSM `SecureString` | Práctica recomendada, ya en uso. |
-| [ADR-025](decisiones_full.md#adr-025-codepipeline-y-codebuild-en-una-cuenta-de-deployments) | CI/CD | CodePipeline y CodeBuild en una cuenta de Deployments; GitHub vía CodeConnections | Todo en AWS; sin credenciales permanentes. |
+| [ADR-025](decisiones_full.md#adr-025-codepipeline-y-codebuild-en-una-cuenta-de-deployments) | CI/CD | CodePipeline y CodeBuild en una cuenta de Deployments; GitHub vía CodeConnections; pipelines de Terraform, de aplicaciones, de la imagen del enclave y de AFT | Todo en AWS y sin credenciales permanentes; riesgo: la cuenta de Deployments puede cambiar producción, mitigado con SCPs, roles separados de plan y apply, y aprobaciones |
 | [ADR-026](decisiones_full.md#adr-026-despliegues-bluegreen-nativos-de-ecs) | Estrategia de despliegue | Blue/green nativo de ECS, sin CodeDeploy | Menos piezas. |
 | [ADR-027](decisiones_full.md#adr-027-opentelemetry-como-capa-de-desacople-de-observabilidad) | Observabilidad | OpenTelemetry en todo; New Relic se mantiene; se evalúan alternativas | Cambiar de herramienta sin re-instrumentar. |
 | [ADR-028](decisiones_full.md#adr-028-retención-de-logs-y-archivo-en-s3-con-athena) | Logs | Retención en todo; archivo en S3 consultado con Athena | Costo predecible. |

@@ -811,13 +811,26 @@ Secretos de configuración en Secrets Manager (con rotación donde aplique) y pa
 
 ### Contexto
 
-Se quiere CI/CD dentro de AWS. El código queda en GitHub (o su host actual).
+Se quiere CI/CD dentro de AWS. El código queda en GitHub (o su host actual). Hoy no hay pipelines: los cambios se hacen a mano.
+
+### Opciones consideradas
+
+* Pipelines dentro de cada cuenta de destino.
+* Pipelines en la cuenta de AFT.
+* Pipelines en una cuenta de Deployments dedicada, como recomienda la guía de AWS para entornos multicuenta.
 
 ### Decisión
 
-CodePipeline y CodeBuild en una cuenta de Deployments (pasos `O7` y `11`), conectados a GitHub con CodeConnections. Despliegan en cada cuenta asumiendo roles de IaC. ECR replica imágenes a las cuentas y a la región de DR. No se usa CodeCommit.
+CodePipeline y CodeBuild en una cuenta de Deployments (pasos `O7` y `11`), conectados a GitHub con CodeConnections. No se usa CodeCommit. Los pipelines despliegan en cada cuenta asumiendo roles de IaC; ECR replica las imágenes a las cuentas y a la región de DR.
 
-> Propuesta por validar: la cuenta de Deployments separada sigue la guía de AWS para entornos multicuenta; si se prefiere menos cuentas, el pipeline puede vivir en la cuenta de AFT.
+Hay cuatro tipos de pipeline:
+
+| Pipeline | Uno por | Etapas |
+|---|---|---|
+| Infraestructura (Terraform) | Cuenta y componente (`infra/live/...`) | Fuente → `fmt`, `validate` y revisión de políticas → `plan` guardado como artefacto → aprobación manual para producción → `apply` con un rol distinto al del `plan` |
+| Aplicación | Servicio de ECS | Fuente → build de la imagen arm64 → pruebas → escaneo de la imagen (ECR con Amazon Inspector) → push a ECR con etiquetas inmutables → despliegue en dev → staging → aprobación → producción con blue/green nativo de ECS ([ADR-026](#adr-026-despliegues-bluegreen-nativos-de-ecs)) |
+| Imagen del enclave | Servicio de firma | Build de la imagen del enclave → medición del PCR0 → Terraform actualiza la política de la llave de KMS con el nuevo PCR0 → renovación de instancias del grupo de autoescalado; aprobación de dos personas ([ADR-021](#adr-021-llaves-de-firma-de-wallets-con-nitro-enclaves-kms-y-dynamodb)) |
+| Cuentas (AFT) | Solicitud de cuenta | Los administra AFT ([ADR-004](#adr-004-aft-sobre-control-tower-para-crear-cuentas)) |
 
 ### Consecuencias
 
@@ -825,14 +838,30 @@ CodePipeline y CodeBuild en una cuenta de Deployments (pasos `O7` y `11`), conec
 
 * Todo dentro de AWS y auditado en CloudTrail.
 * Los pipelines no tienen credenciales permanentes en las cuentas destino.
+* El `plan` revisado es exactamente lo que se aplica.
 
 #### Negativas
 
 * CodePipeline es menos flexible que otras herramientas de CI.
+* Una cuenta más que operar.
+
+#### Riesgos de seguridad y mitigaciones
+
+La cuenta de Deployments puede asumir los roles que cambian producción, así que pasa a ser el objetivo más valioso de la organización. Quien la controle, o controle un repositorio, puede desplegar en producción.
+
+| Riesgo | Mitigación |
+|---|---|
+| Compromiso de la cuenta de Deployments | SCPs restrictivas; ninguna persona con escritura; alertas de CloudTrail sobre cambios en pipelines, roles y conexiones |
+| Abuso de los roles de IaC en las cuentas destino | Política de confianza que solo admite el rol de cada pipeline (con condición `aws:SourceAccount`); roles separados de `plan` (solo lectura) y `apply`; permisos mínimos por componente |
+| Cambio malicioso o erróneo desde el repositorio (cadena de suministro) | CodeConnections limitado a repositorios específicos; ramas protegidas y revisión obligatoria en GitHub; aprobación manual antes de producción |
+| Imagen o dependencia comprometida | Escaneo de imágenes, etiquetas inmutables en ECR y, opcionalmente, firma de imágenes |
+| Filtración de artefactos (planes de Terraform con datos sensibles) | Buckets de artefactos cifrados con KMS, acceso solo para los roles del pipeline, ciclo de vida corto |
+| Cambio de la imagen del enclave para robar llaves | El PCR0 solo cambia con aprobación de dos personas y queda registrado en CloudTrail |
 
 ### Qué cambiaría la decisión
 
-* Que el equipo dependa mucho de GitHub Actions; se usaría OIDC hacia los mismos roles de IaC.
+* Que el equipo dependa mucho de GitHub Actions; se usaría OIDC hacia los mismos roles de IaC, con las mismas mitigaciones.
+* Preferir menos cuentas: los pipelines podrían vivir en la cuenta de AFT, aceptando concentrar más privilegios en ella.
 
 ---
 

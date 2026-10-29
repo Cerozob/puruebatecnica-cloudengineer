@@ -6,22 +6,40 @@
 
 ![Arquitectura actual de Kova](diagramas/as-is.svg)
 
-Kova opera en una sola cuenta de AWS donde conviven producción y no productivo, sin infraestructura como código: los cambios se hacen a mano en la consola. Los usuarios entran por WAF y balanceadores hacia servicios en ECS; el equipo entra por una VPN. Los servicios usan RDS, OpenSearch y Temporal, y se conectan con proveedores de pagos locales y con la red Stellar. New Relic recibe la telemetría.
+### Cómo funciona hoy
 
-Cada marca `?` es una suposición o ambigüedad; todas están en la [tabla de suposiciones](decisiones_short.md#suposiciones).
+Kova opera en **una sola cuenta de AWS** donde conviven producción y no productivo, sin separación formal y **sin infraestructura como código**: todo se creó y se modifica a mano en la consola.
 
-* **1?** Equipo: 10 ingenieros, dos turnos de guardia 24/7.
-* **2?** VPN: producto y proveedor desconocidos.
-* **3?** Balanceadores: uno por servicio o compartidos, desconocido.
-* **4?** ECS: hasta 100 servicios; número de clusters, tipo de lanzamiento y autoescalado desconocidos.
-* **5?** Temporal: self-hosted en ECS.
-* **6?** OpenSearch: configuración y propósito desconocidos.
-* **7?** RDS: hasta 30 bases con motores, tamaños y propósitos diversos.
-* **8?** Persistencia de Temporal: qué base y motor, desconocido.
-* **9?** Uso de KMS por los servicios (firma o cifrado), desconocido.
-* **10?** Llaves de firma de wallets: en KMS o cifradas en un almacén existente.
-* **11?** Proveedores de pagos: tienen en lista blanca las IPs de salida de Kova.
-* **12?** Secretos de configuración: en Secrets Manager / SSM.
+* **Entrada de clientes:** los usuarios, en varios países, entran por AWS WAF y balanceadores de carga hacia decenas de servicios en ECS, repartidos en muchos clusters.
+* **Entrada del equipo:** los ingenieros entran por una VPN y hacen los cambios directamente en la consola.
+* **Datos y orquestación:** los servicios usan más de 20 bases en RDS, un dominio de OpenSearch y Temporal para los flujos de negocio.
+* **Integraciones:** los servicios se conectan con proveedores de pagos locales y con la red pública Stellar, y firman transacciones con llaves de wallets.
+* **Observabilidad:** la telemetría va a New Relic.
+
+Los problemas principales:
+
+* Un cambio de pruebas puede afectar a clientes.
+* No hay forma de saber qué es producción ni quién cambió qué.
+* No hay recuperación ante desastres.
+
+### Suposiciones y ambigüedades del diagrama
+
+Cada marca `?` del diagrama es una suposición o una ambigüedad. Todas están, junto con el resto, en la [tabla de suposiciones](decisiones_short.md#suposiciones).
+
+| Marca | Componente | Suposición |
+|---|---|---|
+| **1?** | Equipo | 10 ingenieros con dos turnos de guardia 24/7 en varias zonas horarias. |
+| **2?** | VPN | Producto y proveedor desconocidos; da acceso de red a la VPC y a los servicios de ECS. |
+| **3?** | Balanceadores | Un ALB por servicio. |
+| **4?** | ECS | Hasta 100 servicios, con un promedio de 2 vCPU y 4 GB por servicio; número de clusters, tipo de lanzamiento y autoescalado desconocidos (se asume autoescalado configurado). |
+| **5?** | Temporal | Self-hosted en ECS, en la misma cuenta. |
+| **6?** | OpenSearch | Dominio administrado de unos 100 GB; configuración y propósito (búsqueda o logs) desconocidos. |
+| **7?** | RDS | Hasta 30 bases con motores, tamaños y propósitos diversos; en promedio, instancias grandes. |
+| **8?** | Persistencia de Temporal | Se desconoce qué base y qué motor la respaldan; se asume una de las bases de RDS. |
+| **9?** | Uso de KMS | Se desconoce cómo usan KMS los servicios (cifrado o firma). |
+| **10?** | Llaves de firma de wallets | Guardadas en una base de RDS, no como llaves de KMS por wallet. |
+| **11?** | Proveedores de pagos | Tienen en lista blanca las IPs de salida de Kova; esas direcciones no pueden cambiar. |
+| **12?** | Secretos de configuración | En Secrets Manager / SSM `SecureString` (práctica recomendada ya seguida). |
 
 <div style="page-break-after: always;"></div>
 
