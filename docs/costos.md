@@ -29,6 +29,44 @@ Los servicios que no están en la calculadora (OpenSearch Serverless NextGen, Cl
 
 **No incluye:** la licencia de New Relic u otra herramienta de APM, el plan de soporte de AWS, impuestos ni el costo del equipo. Tampoco descuentos por Savings Plans, que se evaluarían una vez estable el uso.
 
+## Línea base: arquitectura actual
+
+Estimado independiente de la arquitectura actual en [costos-actual.xlsx](costos-actual.xlsx), con los mismos supuestos compartidos (tráfico, tareas, bases, logs) para que la comparación sea justa:
+
+* ECS en Fargate x86, sin Spot ni rightsizing.
+* No productivo dentro de la misma cuenta, encendido 24/7.
+* Dominio de OpenSearch con nodos fijos.
+* Logs sin retención.
+* VPN de terceros.
+* Sin DR, sin gobierno y sin pipelines.
+
+| Categoría | Actual (USD / mes) | Objetivo (USD / mes) | Diferencia |
+|---|---|---|---|
+| Cómputo | 3,604 | 2,586 | −1,018 |
+| Red | 1,491 | 3,733 | +2,242 |
+| Datos | 10,998 | 10,524 | −474 |
+| Llaves y secretos | 130 | 142 | +12 |
+| Observabilidad | 1,290 | 1,050 | −240 |
+| Gobierno | 0 | 260 | +260 |
+| CI/CD | 0 | 246 | +246 |
+| DR | 0 | 4,966 | +4,966 |
+| No productivo | 6,571 | 6,399 | −172 |
+| **Total** | **~24,100** | **~29,900** | **+5,800 (+24 %)** |
+
+**Lo que agrega el objetivo:**
+
+* El DR en pilot light, que hoy no existe y es la mayor parte de la diferencia.
+* VPC Lattice, CloudFront, AWS Client VPN, el gobierno (Config, Security Hub) y los pipelines.
+
+**Lo que ahorra:**
+
+* Graviton, Fargate Spot y el rightsizing en cómputo.
+* Consolidar ALBs.
+* La retención de logs con archivo en S3.
+* OpenSearch Serverless en lugar de un dominio con nodos fijos.
+
+Sin DR, el objetivo costaría menos que hoy. Los dos estimados usan valores de ejemplo por validar.
+
 ## Dos recortes concretos y el riesgo que agregan
 
 Por elegir entre los candidatos de la hoja `Recortes`, todos derivados de las [decisiones](decisiones_short.md):
