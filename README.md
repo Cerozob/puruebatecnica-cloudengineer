@@ -4,7 +4,7 @@
 
 Propuesta para llevar a Kova, una fintech de pagos con stablecoins que hoy opera en una sola cuenta de AWS sin infraestructura como código, a una plataforma multicuenta, gobernada y modernizada en 12 meses, sin downtime perceptible.
 
-> Estado: borrador. Los diagramas se exportan desde Eraser a `docs/diagramas/`; el estimado de costos está pendiente.
+> Estado: borrador. Los diagramas se exportan desde Eraser a `docs/diagramas/`; el estimado de costos tiene valores de ejemplo por validar.
 
 ## Entregables
 
@@ -14,7 +14,7 @@ Propuesta para llevar a Kova, una fintech de pagos con stablecoins que hoy opera
 | Plan de migración y modernización | [docs/plan-migracion.md](docs/plan-migracion.md) |
 | Decisiones y suposiciones (resumen) | [docs/decisiones_short.md](docs/decisiones_short.md) |
 | Decisiones (detalle) | [docs/decisiones_full.md](docs/decisiones_full.md) |
-| Estimado de costos y recortes | Pendiente |
+| Estimado de costos y recortes (borrador) | [docs/costos.md](docs/costos.md), [docs/costos.xlsx](docs/costos.xlsx) |
 | Controles de seguridad de los primeros 90 días | [docs/seguridad-90-dias.md](docs/seguridad-90-dias.md) |
 | Esqueleto de IaC en Terraform | [infra/](infra/README.md) |
 | Uso de IA generativa | [docs/uso-de-ia-generativa.md](docs/uso-de-ia-generativa.md) |
