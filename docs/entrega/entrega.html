@@ -1,0 +1,2134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Kova: arquitectura objetivo y plan de migración</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm;
+  @bottom-center { content: counter(page); font: 9pt sans-serif; color: #666; } }
+@page diagrama { size: A4 landscape; margin: 12mm; }
+@page portada { @bottom-center { content: none; } }
+html { font: 10.5pt/1.5 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; }
+body { margin: 0; }
+h1 { font-size: 20pt; margin: 0 0 10pt; color: #FF9900; border-bottom: 2px solid #FF9900; padding-bottom: 4pt; }
+h2 { font-size: 13.5pt; margin: 16pt 0 6pt; color: #FF9900; break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 12pt 0 4pt; break-after: avoid; }
+h4 { font-size: 10.5pt; margin: 10pt 0 3pt; break-after: avoid; }
+section { break-before: page; }
+section.portada { break-before: auto; page: portada; height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+.portada h1 { font-size: 28pt; border: none; }
+.portada .sub { font-size: 14pt; color: #444; margin: 0 0 24pt; }
+section.diagrama { page: diagrama; }
+.diagrama h1 { font-size: 15pt; margin-bottom: 6pt; }
+.diagrama img { width: 100%; height: 160mm; object-fit: contain; display: block; border: 1px solid #c9d2db; box-sizing: border-box; }
+table { border-collapse: collapse; width: 100%; font-size: 8.8pt; margin: 6pt 0; }
+th, td { border: 1px solid #c9d2db; padding: 3pt 5pt; vertical-align: top; text-align: left; }
+thead th { background: #fff0d9; }
+tr { break-inside: avoid; }
+code { font-family: Menlo, Consolas, monospace; font-size: 0.9em; background: #f2f4f6; padding: 0 2pt; }
+pre { font: 8pt/1.35 Menlo, Consolas, monospace; background: #f6f8fa; padding: 6pt 8pt; white-space: pre-wrap; break-inside: avoid; }
+pre code { background: none; padding: 0; }
+.nota { font-size: 9pt; color: #555; }
+hr { border: none; border-top: 1px solid #e3e7eb; margin: 14pt 0; }
+ol.indice { list-style: none; padding: 0; margin: 12pt 0; font-size: 11.5pt; }
+ol.indice li { margin: 0 0 8pt; }
+ol.indice a { display: flex; color: #1a1a1a; text-decoration: none; }
+ol.indice a span:first-child { flex: 1; border-bottom: 1px dotted #FF9900; margin-right: 6pt; }
+ol.indice .pag { color: #FF9900; font-weight: 700; }
+a { color: #c47400; }
+blockquote { margin: 6pt 0; padding-left: 10pt; border-left: 3px solid #c9d2db; color: #444; }
+</style>
+</head>
+<body>
+
+<section class="portada">
+<h1>Kova: arquitectura objetivo y plan de migración</h1>
+<p class="sub">Prueba técnica · Platform / Cloud Engineer</p>
+<p>Autor: <strong>Camilo Rozo</strong></p>
+<p class="nota">Repositorio (documentos, libros de costos y esqueleto de Terraform):<br><a href="https://github.com/Cerozob/puruebatecnica-cloudengineer/tree/claude/optimistic-feynman-0baipi">https://github.com/Cerozob/puruebatecnica-cloudengineer/tree/claude/optimistic-feynman-0baipi</a></p>
+<p class="nota">Diagramas editables (Eraser):<br><a href="https://app.eraser.io/workspace/Ij84o5Dz4IH3ScJQkZkG">https://app.eraser.io/workspace/Ij84o5Dz4IH3ScJQkZkG</a></p>
+</section>
+
+<section id="indice">
+<h1>Contenido</h1>
+<ol class="indice"><li><a href="#ia"><span>1. Uso de IA generativa</span><span class="pag">3</span></a></li><li><a href="#actual"><span>2. Arquitectura actual y suposiciones</span><span class="pag">5</span></a></li><li><a href="#objetivo"><span>3. Arquitectura objetivo</span><span class="pag">8</span></a></li><li><a href="#migracion"><span>4. Plan de migración y modernización</span><span class="pag">12</span></a></li><li><a href="#decisiones"><span>5. Decisiones técnicas y suposiciones</span><span class="pag">17</span></a></li><li><a href="#costos"><span>6. Estimado de costos y recortes</span><span class="pag">20</span></a></li><li><a href="#seguridad"><span>7. Controles de seguridad de los primeros 90 días</span><span class="pag">22</span></a></li><li><a href="#iac"><span>8. Infraestructura como código</span><span class="pag">23</span></a></li><li><a href="#anexo"><span>Anexo A. Decisiones en detalle</span><span class="pag">25</span></a></li></ol>
+</section>
+
+<section id="ia">
+<h1>1. Uso de IA generativa</h1>
+<!-- Borrador generado con IA a partir de la estructura del reporte anterior. Reescribir en palabras propias antes de entregar. -->
+
+<h2>1. Herramientas de IA Generativa Utilizadas</h2>
+<ul>
+<li>Claude Code (sesión en la nube, con modo de planeación)</li>
+<li>Servidores MCP conectados a Claude Code:</li>
+<li>AWS Knowledge / AWS MCP, para consultar documentación oficial de AWS</li>
+<li>AWS Pricing, para precios unitarios</li>
+<li>Eraser, para escribir los diagramas como código</li>
+</ul>
+<h2>2. Qué tareas apoyo con IA</h2>
+<ul>
+<li>Investigación: verificar contra la documentación de AWS cada servicio y cada afirmación (curvas soportadas por KMS y CloudHSM, alcance de DRS, Nitro Enclaves, VPC Lattice con ECS, novedades como OpenSearch Serverless NextGen y CloudWatch Omni).</li>
+<li>Redacción de borradores: decisiones (ADRs), plan de migración y modernización, controles de seguridad, narrativas de los diagramas y este documento.</li>
+<li>Código de los diagramas en Eraser (solo diagramas como código, sin los generadores de IA de Eraser) y el esqueleto de Terraform.</li>
+</ul>
+<p>La numeración de los diagramas, su revisión visual y la exportación las hice yo.</p>
+<h2>3. Qué validaciones realizo sobre lo generado</h2>
+<ul>
+<li>Cada decisión la tomé yo; el agente solo la cuestionaba contra las buenas prácticas de AWS y yo decidía si cambiarla.</li>
+<li>Las afirmaciones técnicas se contrastaron con la documentación oficial de AWS. Cuando la fuente no era accesible desde el agente (por ejemplo, un hilo de re:Post), revisé la fuente yo mismo.</li>
+<li>Los precios clave los revisé en la calculadora de AWS (por ejemplo, el costo de CloudHSM).</li>
+<li>El esqueleto de Terraform se validó con <code>terraform fmt</code> y <code>terraform validate</code>.</li>
+</ul>
+<h2>4. Qué riesgos identifiqué</h2>
+<ul>
+<li><strong>Afirmaciones plausibles pero falsas:</strong> por ejemplo, proponer AWS Elastic Disaster Recovery para cargas que no cubre (ECS, RDS). Se detectó al verificar en la documentación.</li>
+<li><strong>Fuentes mal usadas:</strong> citar un artículo que habla de otra cosa (un blog de análisis de wallets en DynamoDB no trata de custodia de llaves).</li>
+<li><strong>Sobreingeniería y sobredocumentación:</strong> tendencia a agregar más servicios, detalle y texto del necesario para una prueba de diseño.</li>
+<li><strong>Desviación:</strong> ante la ambigüedad, el agente asume; por eso las suposiciones quedaron en una lista explícita.</li>
+</ul>
+<h2>5. Cómo evité depender ciegamente de la herramienta</h2>
+<ul>
+<li>Diseñé y decidí yo; el agente actuó como contraparte que cuestiona, con la regla "yo decido, tú me retas".</li>
+<li>Respondí siempre con mis palabras en lugar de aceptar opciones prefabricadas.</li>
+<li>Trabajé en modo de planeación, revisando cada paso antes de ejecutarlo.</li>
+<li>Pedí fuentes oficiales para cada afirmación relevante y revisé por mi cuenta las que el agente no pudo abrir.</li>
+</ul>
+</section>
+
+<section class="diagrama" id="actual">
+<h1>2. Arquitectura actual y suposiciones</h1>
+<img src="../diagramas/as-is.svg" alt="Arquitectura actual de Kova">
+</section>
+<section>
+<h3>Cómo funciona hoy</h3>
+<p>Kova opera en <strong>una sola cuenta de AWS</strong> donde conviven producción y no productivo, sin separación formal y <strong>sin infraestructura como código</strong>: todo se creó y se modifica a mano en la consola.</p>
+<ul>
+<li><strong>Entrada de clientes:</strong> los usuarios, en varios países, entran por AWS WAF y balanceadores de carga hacia decenas de servicios en ECS, repartidos en muchos clusters.</li>
+<li><strong>Entrada del equipo:</strong> los ingenieros entran por una VPN y hacen los cambios directamente en la consola.</li>
+<li><strong>Datos y orquestación:</strong> los servicios usan más de 20 bases en RDS, un dominio de OpenSearch y Temporal para los flujos de negocio.</li>
+<li><strong>Integraciones:</strong> los servicios se conectan con proveedores de pagos locales y con la red pública Stellar, y firman transacciones con llaves de wallets.</li>
+<li><strong>Observabilidad:</strong> la telemetría va a New Relic.</li>
+</ul>
+<p>Los problemas principales:</p>
+<ul>
+<li>Un cambio de pruebas puede afectar a clientes.</li>
+<li>No hay forma de saber qué es producción ni quién cambió qué.</li>
+<li>No hay recuperación ante desastres.</li>
+</ul>
+<h3>Suposiciones y ambigüedades del diagrama</h3>
+<p>Cada marca <code>?</code> del diagrama es una suposición o una ambigüedad. Todas están, junto con el resto, en la tabla de suposiciones.</p>
+<table>
+<thead>
+<tr>
+<th>Marca</th>
+<th>Componente</th>
+<th>Suposición</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1?</strong></td>
+<td>Equipo</td>
+<td>10 ingenieros con dos turnos de guardia 24/7 en varias zonas horarias.</td>
+</tr>
+<tr>
+<td><strong>2?</strong></td>
+<td>VPN</td>
+<td>Producto y proveedor desconocidos; da acceso de red a la VPC y a los servicios de ECS.</td>
+</tr>
+<tr>
+<td><strong>3?</strong></td>
+<td>Balanceadores</td>
+<td>Un ALB por servicio.</td>
+</tr>
+<tr>
+<td><strong>4?</strong></td>
+<td>ECS</td>
+<td>Hasta 100 servicios, con un promedio de 2 vCPU y 4 GB por servicio; número de clusters, tipo de lanzamiento y autoescalado desconocidos (se asume autoescalado configurado).</td>
+</tr>
+<tr>
+<td><strong>5?</strong></td>
+<td>Temporal</td>
+<td>Self-hosted en ECS, en la misma cuenta.</td>
+</tr>
+<tr>
+<td><strong>6?</strong></td>
+<td>OpenSearch</td>
+<td>Dominio administrado de unos 100 GB; configuración y propósito (búsqueda o logs) desconocidos.</td>
+</tr>
+<tr>
+<td><strong>7?</strong></td>
+<td>RDS</td>
+<td>Hasta 30 bases con motores, tamaños y propósitos diversos; en promedio, instancias grandes.</td>
+</tr>
+<tr>
+<td><strong>8?</strong></td>
+<td>Persistencia de Temporal</td>
+<td>Se desconoce qué base y qué motor la respaldan; se asume una de las bases de RDS.</td>
+</tr>
+<tr>
+<td><strong>9?</strong></td>
+<td>Uso de KMS</td>
+<td>Se desconoce cómo usan KMS los servicios (cifrado o firma).</td>
+</tr>
+<tr>
+<td><strong>10?</strong></td>
+<td>Llaves de firma de wallets</td>
+<td>Guardadas en una base de RDS, no como llaves de KMS por wallet.</td>
+</tr>
+<tr>
+<td><strong>11?</strong></td>
+<td>Proveedores de pagos</td>
+<td>Tienen en lista blanca las IPs de salida de Kova; esas direcciones no pueden cambiar.</td>
+</tr>
+<tr>
+<td><strong>12?</strong></td>
+<td>Secretos de configuración</td>
+<td>En Secrets Manager / SSM <code>SecureString</code> (práctica recomendada ya seguida).</td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="diagrama" id="objetivo">
+<h1>3. Arquitectura objetivo: organización y cuentas</h1>
+<img src="../diagramas/objetivo-organizacion.svg" alt="Organización objetivo">
+</section>
+<section>
+<ul>
+<li><strong>O1</strong> Una cuenta de administración nueva, sin cargas, con Organizations, Control Tower, IAM Identity Center y la facturación consolidada.</li>
+<li><strong>O2</strong> Las cuentas Log Archive y Audit de Control Tower reciben CloudTrail, Config y Security Hub.</li>
+<li><strong>O3</strong> AFT crea staging, dev y el pool de sandboxes, cada una con su línea base de roles, etiquetas y presupuestos.</li>
+<li><strong>O4</strong> La cuenta actual se une sin cambios como producción, en una OU transitoria: personas solo lectura, cambios solo por IaC.</li>
+<li><strong>O5</strong> Staging y dev reciben todo lo que no es producción; tienen SCPs restrictivas.</li>
+<li><strong>O6</strong> Innovation Sandbox presta cuentas temporales con tope de costo y limpieza automática.</li>
+<li><strong>O7</strong> CodePipeline y CodeBuild en la cuenta de Deployments despliegan en cada cuenta con roles de IaC.</li>
+<li><strong>O8</strong> Los ingenieros entran con IAM Identity Center.</li>
+</ul>
+</section>
+
+<section class="diagrama">
+<h1>3. Arquitectura objetivo: plataforma de producción</h1>
+<img src="../diagramas/objetivo-plataforma.svg" alt="Plataforma objetivo">
+</section>
+<section>
+<ol>
+<li>Los usuarios entran por CloudFront y el WAF actual hacia los ALB; DNS y endpoints no cambian.</li>
+<li>Los servicios de ECS pasan a Fargate con Graviton y rightsizing; Temporal sigue en ECS.</li>
+<li>Los servicios se comunican por VPC Lattice con políticas de IAM.</li>
+<li>Los servicios de tarjetas están en su propia service network; el issuer-processor guarda los datos de tarjeta.</li>
+<li>Un servicio pide una firma al servicio de firma (EC2 con Nitro Enclaves).</li>
+<li>El enclave lee la llave cifrada de DynamoDB, la descifra con una llave de KMS que solo acepta su atestación, firma y la descarta.</li>
+<li>Stellar, los proveedores de pagos y el procesador se alcanzan por el mismo NAT y las mismas IPs de hoy.</li>
+<li>Datos en RDS (o Aurora) y OpenSearch Serverless NextGen; secretos en Secrets Manager / SSM.</li>
+<li>Todo servicio emite OpenTelemetry a un colector ADOT; New Relic se mantiene mientras se evalúan alternativas.</li>
+<li>Todo log tiene retención; lo antiguo se archiva en S3 y se consulta con Athena.</li>
+<li>GitHub, CodePipeline y CodeBuild, ECR y despliegue blue/green nativo de ECS.</li>
+<li>El equipo entra por AWS Client VPN con IAM Identity Center; en producción solo lee.</li>
+<li>CloudTrail, Config y Security Hub reportan a las cuentas Log Archive y Audit.</li>
+<li>Región de DR en pilot light: réplicas de RDS, tabla global de DynamoDB, llave réplica de KMS y ECR replicado; ECS se crea con Terraform al conmutar.</li>
+</ol>
+<p>Las decisiones detrás de cada paso están en decisiones_short.md.</p>
+</section>
+
+<section id="migracion">
+<h1>4. Plan de migración y modernización</h1>
+<p>Cómo llevar a Kova de su estado actual a la arquitectura objetivo en 12 meses, sin downtime perceptible en un sistema financiero 24/7. El plan sigue las fases de la guía de AWS para migraciones grandes (evaluar, movilizar, migrar y modernizar) y las estrategias 7R. Las decisiones citadas están en decisiones_full.md.</p>
+<h2>La idea central</h2>
+<p><strong>Producción no se mueve.</strong> La cuenta actual se queda como cuenta de producción (ADR-002); lo que sale es todo lo demás. Por eso la "migración" es en realidad una limpieza de la cuenta de producción más la construcción de la plataforma alrededor de ella:</p>
+<table>
+<thead>
+<tr>
+<th>Estrategia (7R)</th>
+<th>Qué cubre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Retain</td>
+<td>Producción: se queda en su cuenta y se adopta en IaC y en la organización.</td>
+</tr>
+<tr>
+<td>Rehost / Relocate o rebuild</td>
+<td>No productivo: sale a staging y dev, según la carga (ADR-012).</td>
+</tr>
+<tr>
+<td>Retire</td>
+<td>Recursos huérfanos encontrados en el inventario.</td>
+</tr>
+<tr>
+<td>Replatform / Refactor</td>
+<td>Modernización posterior: Fargate y Graviton, Aurora, OpenSearch Serverless NextGen, VPC Lattice, servicio de firma.</td>
+</tr>
+</tbody>
+</table>
+<h2>Principios de cero downtime</h2>
+<ol>
+<li><strong>Nada de producción se mueve</strong> de cuenta, región, IP ni DNS.</li>
+<li><strong>Todo cambio es aditivo y en paralelo</strong>: lo nuevo se construye al lado de lo viejo y el tráfico se pasa de a poco.</li>
+<li><strong>Todo cambio es reversible</strong> y tiene un plan de vuelta atrás probado antes de empezar.</li>
+<li><strong>Las herramientas de migración no tocan producción.</strong> Se usan solo con el no productivo.</li>
+<li><strong>Un import de Terraform solo se aplica si el plan no muestra cambios.</strong></li>
+<li><strong>Despliegues blue/green</strong> para servicios y bases de datos.</li>
+<li><strong>Cortes en horas de menor tráfico</strong> y congelamiento de cambios alrededor de eventos de alto volumen.</li>
+</ol>
+<h2>Qué hacemos primero y por qué</h2>
+<ol>
+<li><strong>Inventario y etiquetas.</strong> Sin saber qué es producción y qué no, cualquier movimiento es una apuesta. Además resuelve las suposiciones <code>1?</code>–<code>12?</code>.</li>
+<li><strong>La organización y la auditoría.</strong> No cambian nada en producción y nos dan visibilidad (CloudTrail, Config) antes de tocar cualquier cosa.</li>
+<li><strong>Adoptar producción en Terraform.</strong> Una vez que producción está en código, cada cambio posterior es revisable y reversible.</li>
+<li><strong>Sacar el no productivo.</strong> Reduce el riesgo de que un cambio de pruebas afecte a clientes.</li>
+<li><strong>Modernizar.</strong> Solo cuando lo anterior está estable.</li>
+</ol>
+<h2>Qué no tocamos y por qué</h2>
+<table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Por qué no se toca</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>La cuenta de producción (no se cambia de cuenta)</td>
+<td>Moverla es el mayor riesgo de downtime (ADR-002).</td>
+</tr>
+<tr>
+<td>DNS, IPs públicas y de salida</td>
+<td>Los proveedores de pagos tienen en lista blanca las IPs actuales (ADR-020).</td>
+</tr>
+<tr>
+<td>Integración con la red Stellar</td>
+<td>Pieza crítica sin contexto suficiente (ADR-032).</td>
+</tr>
+<tr>
+<td>Temporal</td>
+<td>El equipo lo conoce; migrarlo no aporta en 12 meses (ADR-016).</td>
+</tr>
+<tr>
+<td>Llaves de KMS existentes</td>
+<td>No se pueden mover entre cuentas (ADR-022).</td>
+</tr>
+<tr>
+<td>CloudFront, WAF y ALB</td>
+<td>Ingreso de clientes; solo se importan a IaC (ADR-018).</td>
+</tr>
+<tr>
+<td>New Relic (durante la migración)</td>
+<td>Es la visibilidad que necesitamos mientras cambiamos todo lo demás.</td>
+</tr>
+</tbody>
+</table>
+<h2>Fases</h2>
+<h3>Fase 0. Evaluar (semanas 1 a 4)</h3>
+<ul>
+<li>Activar AWS Config y Resource Explorer en la cuenta actual y sacar el inventario completo.</li>
+<li>Mapear dependencias con VPC Flow Logs y los mapas de servicios de New Relic.</li>
+<li>Clasificar cada recurso como producción, no productivo o huérfano, y etiquetar (<code>environment</code>, <code>service</code>, <code>owner</code>, <code>data-classification</code>).</li>
+<li>Responder las suposiciones: motores de RDS, persistencia de Temporal, dónde están las llaves de wallets, cómo es la VPN, qué balanceadores existen.</li>
+<li>Línea base de costos por servicio con las etiquetas nuevas y Cost Explorer.</li>
+<li>Abrir la conversación con el equipo de cuenta de AWS (ver Apoyo de AWS).</li>
+</ul>
+<p><strong>Criterio de salida:</strong> el 100 % de los recursos tiene <code>environment</code> y dueño; lista de huérfanos aprobada.</p>
+<h3>Fase 1. Movilizar: la fundación (semanas 3 a 10)</h3>
+<ul>
+<li>Crear la cuenta de administración, la organización, Control Tower (Log Archive y Audit), IAM Identity Center y AFT (ADR-001, ADR-004).</li>
+<li>Revisar los acuerdos de facturación y luego invitar a la cuenta actual a la OU transitoria de producción, sin SCPs restrictivas. <strong>Impacto en producción: ninguno.</strong></li>
+<li>CloudTrail organizacional, Config y Security Hub (ADR-030).</li>
+<li>Crear con AFT las cuentas Deployments, staging, dev y el pool de Innovation Sandbox, con SCPs restrictivas.</li>
+<li>Repositorio de Terraform, backend S3 y pipelines base (ADR-010, ADR-025).</li>
+<li>Permission sets de Identity Center: solo lectura para producción y rol <em>break-glass</em>. Los accesos actuales todavía no se quitan.</li>
+</ul>
+<p><strong>Criterio de salida:</strong> la cuenta de producción está en la organización, con CloudTrail centralizado y sin ningún incidente atribuible.</p>
+<h3>Fase 2. Adoptar producción en IaC (meses 2 a 5)</h3>
+<p>Se importa por componentes, de menor a mayor riesgo, con la regla de plan sin cambios (ADR-008):</p>
+<ol>
+<li>Red: VPCs, subredes, security groups, NAT y Elastic IPs.</li>
+<li>Ingreso: CloudFront, WAF, ALB, certificados y DNS.</li>
+<li>Datos: RDS, OpenSearch, DynamoDB, KMS.</li>
+<li>Cómputo: los servicios de ECS no se importan, se redefinen en Terraform y se redespliegan con blue/green, uno por uno.</li>
+</ol>
+<p>En paralelo:</p>
+<ul>
+<li>Instrumentar con OpenTelemetry servicio por servicio, enviando a New Relic igual que hoy (ADR-027).</li>
+<li>Retención en todos los grupos de logs (ADR-028).</li>
+<li>Cuando el pipeline está probado para un equipo, se quitan sus permisos de escritura en producción (ADR-006).</li>
+</ul>
+<p><strong>Vuelta atrás:</strong> un import no cambia el recurso; si algo sale mal se quita del estado con <code>terraform state rm</code>. Un redespliegue blue/green vuelve solo al servicio anterior.</p>
+<p><strong>Criterio de salida:</strong> toda la producción está en Terraform y ninguna persona tiene permisos de escritura en producción.</p>
+<h3>Fase 3. Sacar el no productivo, por oleadas (meses 3 a 7)</h3>
+<table>
+<thead>
+<tr>
+<th>Oleada</th>
+<th>Contenido</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Piloto</td>
+<td>2 o 3 servicios de dev sin estado</td>
+<td>Rebuild con Terraform en la cuenta dev</td>
+</tr>
+<tr>
+<td>2. Dev</td>
+<td>El resto de dev</td>
+<td>Rebuild o rehost según la carga</td>
+</tr>
+<tr>
+<td>3. Staging</td>
+<td>Staging y sus bases</td>
+<td>Rehost con snapshots compartidos, o seeds nuevos</td>
+</tr>
+<tr>
+<td>4. Retiro</td>
+<td>Recursos no productivos en la cuenta de producción</td>
+<td>Detener, snapshot, cuarentena de 30 días y borrar</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Los datos de producción nunca se copian a no productivo sin anonimizar (Habeas Data y PCI).</li>
+<li>Cada oleada valida que producción no dependía de lo que se movió (los flujos de VPC y CloudTrail de la fase 0 lo muestran).</li>
+</ul>
+<p><strong>Vuelta atrás:</strong> hasta el fin de la cuarentena, los recursos viejos siguen en la cuenta de producción, detenidos y recuperables.</p>
+<h3>Fase 4. Plataforma objetivo alrededor de producción (meses 4 a 9)</h3>
+<p>Todo se construye en paralelo y se activa de a poco:</p>
+<ul>
+<li><strong>AWS Client VPN</strong> en paralelo con la VPN actual; corte cuando todo el equipo migró (ADR-019).</li>
+<li><strong>VPC Lattice</strong>: se crean las service networks y se mueven las llamadas entre servicios una por una; la ruta vieja queda hasta que la nueva está validada (ADR-017).</li>
+<li><strong>Segmentación PCI</strong> de los servicios de tarjetas en su propia service network (ADR-033).</li>
+<li><strong>Servicio de firma con Nitro Enclaves</strong> (ADR-021):
+  1. Ceremonia de llaves: cifrar las llaves existentes con la llave de KMS nueva y cargarlas en DynamoDB.
+  2. Modo sombra: el servicio nuevo firma en paralelo sin enviar; las firmas Ed25519 son deterministas, así que se comparan byte a byte con las actuales.
+  3. Corte por grupos de wallets, con vuelta atrás inmediata al firmante actual.</li>
+<li><strong>DR pilot light</strong>: réplicas de RDS entre regiones, tabla global, llave réplica de KMS y replicación de ECR; primer simulacro de conmutación (ADR-031).</li>
+<li><strong>Evaluación de observabilidad</strong>: el colector OpenTelemetry envía en paralelo a New Relic y a los candidatos.</li>
+<li><strong>FinOps</strong>: presupuestos, anomalías y topes (ADR-029).</li>
+</ul>
+<h3>Fase 5. Modernizar (meses 6 a 12)</h3>
+<ul>
+<li><strong>ECS</strong> (ADR-013): Fargate y Graviton servicio por servicio con blue/green; rightsizing con las recomendaciones de AWS Compute Optimizer; Fargate Spot donde se tolere; consolidar clusters.</li>
+<li><strong>RDS</strong> (ADR-014): RDS Blue/Green Deployments para cambios de versión y tamaño; migración a Aurora con réplica de lectura y promoción en horas de bajo tráfico.</li>
+<li><strong>OpenSearch</strong> (ADR-015): doble escritura, carga histórica, cambio de lecturas por alias y el dominio viejo como vuelta atrás.</li>
+<li><strong>SCPs mínimas en producción</strong> si el inventario muestra que son seguras (ADR-007).</li>
+</ul>
+<h2>Cronograma</h2>
+<table>
+<thead>
+<tr>
+<th>Fase</th>
+<th>M1</th>
+<th>M2</th>
+<th>M3</th>
+<th>M4</th>
+<th>M5</th>
+<th>M6</th>
+<th>M7</th>
+<th>M8</th>
+<th>M9</th>
+<th>M10</th>
+<th>M11</th>
+<th>M12</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0. Evaluar</td>
+<td>■</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>1. Fundación</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2. Producción a IaC</td>
+<td></td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3. Sacar no productivo</td>
+<td></td>
+<td></td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>4. Plataforma objetivo</td>
+<td></td>
+<td></td>
+<td></td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>5. Modernizar</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+<td>■</td>
+</tr>
+</tbody>
+</table>
+<p>Con un equipo de 10 personas y guardias 24/7, se asume que dos personas dedican la mayor parte de su tiempo a este plan y el resto participa por servicio.</p>
+<h2>Riesgos principales</h2>
+<table>
+<thead>
+<tr>
+<th>Riesgo</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un recurso "de pruebas" lo usa producción</td>
+<td>Mapa de dependencias de la fase 0 y cuarentena de 30 días antes de borrar.</td>
+</tr>
+<tr>
+<td>Un import cambia un recurso de producción</td>
+<td>Regla de plan sin cambios; revisión obligatoria del plan en el pipeline.</td>
+</tr>
+<tr>
+<td>Quitar permisos humanos deja al equipo sin acción en un incidente</td>
+<td>Rol <em>break-glass</em> probado antes de quitar permisos; pipeline de despliegue rápido.</td>
+</tr>
+<tr>
+<td>Una firma incorrecta del servicio nuevo</td>
+<td>Modo sombra con comparación exacta y corte por grupos de wallets.</td>
+</tr>
+<tr>
+<td>El DR no cumple el RTO</td>
+<td>Simulacros periódicos del <code>terraform apply</code> en la región de DR.</td>
+</tr>
+<tr>
+<td>El equipo se satura</td>
+<td>Fases secuenciales, oleadas pequeñas y apoyo de AWS.</td>
+</tr>
+</tbody>
+</table>
+<h2>Apoyo de AWS</h2>
+<ul>
+<li><strong>Migration Acceleration Program (MAP)</strong> sigue las mismas tres fases (evaluar, movilizar, migrar y modernizar) y puede aportar financiamiento y acompañamiento. Está pensado para migraciones hacia AWS; como Kova ya está en AWS, su aplicabilidad hay que confirmarla con el equipo de cuenta, sobre todo para la parte de modernización.</li>
+<li><strong>AWS Enterprise Support</strong>: arquitecto técnico de cuenta, revisión Well-Architected y AWS Countdown para acompañar los cortes críticos.</li>
+<li><strong>AWS Professional Services o socios de AWS</strong> para acelerar la fundación (Control Tower y AFT) o la adopción de IaC.</li>
+<li><strong>AWS Transform</strong> para evaluaciones y modernización de código en etapas posteriores.</li>
+</ul>
+</section>
+
+<section id="decisiones">
+<h1>5. Decisiones técnicas y suposiciones</h1>
+<p>Resumen de las suposiciones y de las decisiones de arquitectura. El detalle de cada decisión (contexto, opciones, consecuencias y qué la cambiaría) está en decisiones_full.md. Los números <code>1?</code>–<code>12?</code> corresponden al diagrama de la arquitectura actual en arquitectura.md.</p>
+<h2>Suposiciones</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Tema</th>
+<th>Suposición</th>
+<th>Diagrama</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S-01</td>
+<td>Región</td>
+<td><code>us-east-1</code> como región principal; la región de DR no se define.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-02</td>
+<td>Tráfico</td>
+<td>~10 mil solicitudes por minuto en promedio. Picos de 3 veces que duran una semana, cuatro veces al año (un mes de pico al año). El autoescalado probablemente ya está configurado.</td>
+<td><code>4?</code></td>
+</tr>
+<tr>
+<td>S-03</td>
+<td>Cómputo</td>
+<td>Hasta 100 servicios en ECS, con un promedio de 2 vCPU y 4 GB por servicio (cota superior), cada uno detrás de su propio ALB; número de clusters y tipo de lanzamiento desconocidos.</td>
+<td><code>3?</code> <code>4?</code></td>
+</tr>
+<tr>
+<td>S-04</td>
+<td>Bases de datos</td>
+<td>Hasta 30 instancias de RDS con motores y propósitos diversos. Para costos se promedian como instancias grandes en una sola zona (compensa bases medianas y bases Multi-AZ).</td>
+<td><code>7?</code></td>
+</tr>
+<tr>
+<td>S-05</td>
+<td>OpenSearch</td>
+<td>Dominio de unos 100 GB; configuración y propósito (búsqueda o logs) desconocidos.</td>
+<td><code>6?</code></td>
+</tr>
+<tr>
+<td>S-06</td>
+<td>Temporal</td>
+<td>Self-hosted en ECS en la misma cuenta; su persistencia es una de las bases de RDS.</td>
+<td><code>5?</code> <code>8?</code></td>
+</tr>
+<tr>
+<td>S-07</td>
+<td>RTO / RPO</td>
+<td>RTO de 1 hora para todo (por las dependencias entre sistemas) y RPO de 5 minutos; se espera una estrategia de DR.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-08</td>
+<td>Equipo</td>
+<td>10 ingenieros, con dos turnos de guardia 24/7 en varias zonas horarias.</td>
+<td><code>1?</code></td>
+</tr>
+<tr>
+<td>S-09</td>
+<td>Cumplimiento</td>
+<td>Aplica PCI DSS (Kova emite tarjetas) a través de un issuer-processor; la Ley 1581 de Habeas Data ya se cumple.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-10</td>
+<td>Secretos y llaves</td>
+<td>Secretos en Secrets Manager / SSM. Las llaves de firma de wallets se guardan hoy en una base de RDS, no como llaves de KMS por wallet.</td>
+<td><code>9?</code> <code>10?</code> <code>12?</code></td>
+</tr>
+<tr>
+<td>S-11</td>
+<td>Red</td>
+<td>DNS, IPs públicas e IPs de salida en listas blancas de proveedores no cambian.</td>
+<td><code>11?</code></td>
+</tr>
+<tr>
+<td>S-12</td>
+<td>VPN</td>
+<td>Producto y proveedor desconocidos; da acceso de red a las VPCs.</td>
+<td><code>2?</code></td>
+</tr>
+<tr>
+<td>S-13</td>
+<td>Observabilidad</td>
+<td>APM actual: New Relic; se evalúan alternativas sin preferencia previa.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-14</td>
+<td>Blockchain</td>
+<td>Red Stellar (curva Ed25519); sin información de nodos ni de Horizon.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-15</td>
+<td>Código</td>
+<td>El código vive en GitHub (o en su host actual).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-16</td>
+<td>Facturación</td>
+<td>No hay acuerdos atados a la cuenta actual como pagadora que impidan unirla a una organización (se valida antes).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-17</td>
+<td>Wallets</td>
+<td>El número de wallets es alto (miles o más), por lo que una llave de KMS por wallet no es viable en costo.</td>
+<td><code>10?</code></td>
+</tr>
+<tr>
+<td>S-18</td>
+<td>Firmas</td>
+<td>10 millones de firmas de transacciones al mes.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S-19</td>
+<td>Base de costos</td>
+<td>Solo precios bajo demanda en USD: sin Spot, sin Savings Plans ni instancias reservadas, sin capa gratuita. Para estimar, todo se trata como producción.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2>Decisiones</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Nombre</th>
+<th>Descripción</th>
+<th>Razón</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-001</td>
+<td>Organización</td>
+<td>Cuenta de administración nueva; la cuenta actual se invita como miembro</td>
+<td>Práctica de AWS: sin cargas en la cuenta de administración, a la que no le aplican SCPs.</td>
+</tr>
+<tr>
+<td>ADR-002</td>
+<td>Cuenta de producción</td>
+<td>La cuenta actual sigue siendo producción</td>
+<td>Mover producción es el mayor riesgo de downtime; se conservan IDs, IPs, DNS y llaves.</td>
+</tr>
+<tr>
+<td>ADR-003</td>
+<td>OUs y cuentas</td>
+<td>Security, Infrastructure, Workloads (Prod transitoria y NonProd) y Sandbox; cuentas por entorno</td>
+<td>Simple de operar para un equipo de 10.</td>
+</tr>
+<tr>
+<td>ADR-004</td>
+<td>Creación de cuentas</td>
+<td>Control Tower con AFT</td>
+<td>El requisito es Terraform; LZA es CDK.</td>
+</tr>
+<tr>
+<td>ADR-005</td>
+<td>Sandboxes</td>
+<td>Innovation Sandbox on AWS; se acepta el drift de Control Tower como señal</td>
+<td>Presupuesto y limpieza automática por cuenta.</td>
+</tr>
+<tr>
+<td>ADR-006</td>
+<td>Acceso a producción</td>
+<td>Personas solo lectura; cambios solo por roles de IaC; <em>break-glass</em> alertado</td>
+<td>La IaC como única vía de cambio; mínimo privilegio.</td>
+</tr>
+<tr>
+<td>ADR-007</td>
+<td>SCPs</td>
+<td>Restrictivas en todas las cuentas menos producción</td>
+<td>No romper flujos de producción no documentados.</td>
+</tr>
+<tr>
+<td>ADR-008</td>
+<td>Adopción de IaC</td>
+<td>Importar lo sensible y expuesto; reconstruir lo efímero</td>
+<td>Adoptar producción sin tocarla.</td>
+</tr>
+<tr>
+<td>ADR-009</td>
+<td>Herramienta de IaC</td>
+<td>Terraform con <code>aws</code> y <code>awscc</code></td>
+<td>Requisito; <code>awscc</code> cubre servicios nuevos.</td>
+</tr>
+<tr>
+<td>ADR-010</td>
+<td>Layout de Terraform</td>
+<td>Patrones <code>aws-ia</code>/<code>aws-samples</code>; S3 con bloqueo nativo; un estado por cuenta y componente</td>
+<td>Estándar de la industria; estados pequeños.</td>
+</tr>
+<tr>
+<td>ADR-011</td>
+<td>Estrategia de migración</td>
+<td>Retain para producción, sacar el no productivo, retire de huérfanos</td>
+<td>Cero downtime: producción no se mueve.</td>
+</tr>
+<tr>
+<td>ADR-012</td>
+<td>No productivo</td>
+<td>Rehost o rebuild según la carga (abierto)</td>
+<td>No bloquear la limpieza en casos difíciles.</td>
+</tr>
+<tr>
+<td>ADR-013</td>
+<td>Cómputo</td>
+<td>Seguir en ECS; Fargate, Graviton, rightsizing, Spot</td>
+<td>El equipo conoce ECS; menos operación y costo.</td>
+</tr>
+<tr>
+<td>ADR-014</td>
+<td>Bases de datos</td>
+<td>Rightsizing o Aurora según motor y propósito, con Blue/Green</td>
+<td>Ahorro sin downtime perceptible.</td>
+</tr>
+<tr>
+<td>ADR-015</td>
+<td>OpenSearch</td>
+<td>OpenSearch Serverless NextGen</td>
+<td>Escala a cero y cobra por uso.</td>
+</tr>
+<tr>
+<td>ADR-016</td>
+<td>Orquestación</td>
+<td>Temporal self-hosted en ECS, sin cambios por 12 meses</td>
+<td>Experiencia del equipo; otra migración no aporta.</td>
+</tr>
+<tr>
+<td>ADR-017</td>
+<td>Conectividad entre servicios</td>
+<td>VPC Lattice con autenticación de IAM</td>
+<td>Confianza cero, sin problemas de CIDR; costo aceptado.</td>
+</tr>
+<tr>
+<td>ADR-018</td>
+<td>Ingreso</td>
+<td>CloudFront, WAF y ALB sin cambios</td>
+<td>Cero cambio visible para los clientes.</td>
+</tr>
+<tr>
+<td>ADR-019</td>
+<td>Acceso del equipo</td>
+<td>AWS Client VPN con IAM Identity Center</td>
+<td>Una sola identidad, auditada.</td>
+</tr>
+<tr>
+<td>ADR-020</td>
+<td>Direcciones</td>
+<td>DNS, IPs y NAT sin cambios</td>
+<td>Listas blancas de proveedores intactas.</td>
+</tr>
+<tr>
+<td>ADR-021</td>
+<td>Llaves de wallets</td>
+<td>Cifrado de sobre: DynamoDB + KMS con atestación + Nitro Enclaves en EC2</td>
+<td>Costo independiente del número de wallets; la llave en claro solo existe en el enclave. CloudHSM descartado por costo.</td>
+</tr>
+<tr>
+<td>ADR-022</td>
+<td>Ubicación de las llaves</td>
+<td>Se quedan en producción</td>
+<td>Las llaves de KMS no se mueven entre cuentas.</td>
+</tr>
+<tr>
+<td>ADR-023</td>
+<td>Origen de las llaves</td>
+<td>Conservar, importar o generar fuera e importar</td>
+<td>Portabilidad, sin atarse a un proveedor.</td>
+</tr>
+<tr>
+<td>ADR-024</td>
+<td>Secretos</td>
+<td>Secrets Manager y SSM <code>SecureString</code></td>
+<td>Práctica recomendada, ya en uso.</td>
+</tr>
+<tr>
+<td>ADR-025</td>
+<td>CI/CD</td>
+<td>CodePipeline y CodeBuild en una cuenta de Deployments; GitHub vía CodeConnections; pipelines de Terraform, de aplicaciones, de la imagen del enclave y de AFT</td>
+<td>Todo en AWS y sin credenciales permanentes; riesgo: la cuenta de Deployments puede cambiar producción, mitigado con SCPs, roles separados de plan y apply, y aprobaciones</td>
+</tr>
+<tr>
+<td>ADR-026</td>
+<td>Estrategia de despliegue</td>
+<td>Blue/green nativo de ECS, sin CodeDeploy</td>
+<td>Menos piezas.</td>
+</tr>
+<tr>
+<td>ADR-027</td>
+<td>Observabilidad</td>
+<td>OpenTelemetry en todo; New Relic se mantiene; se evalúan alternativas</td>
+<td>Cambiar de herramienta sin re-instrumentar.</td>
+</tr>
+<tr>
+<td>ADR-028</td>
+<td>Logs</td>
+<td>Retención en todo; archivo en S3 consultado con Athena</td>
+<td>Costo predecible.</td>
+</tr>
+<tr>
+<td>ADR-029</td>
+<td>FinOps</td>
+<td>Etiquetas obligatorias, Budgets, Cost Anomaly Detection, topes en dev y sandboxes</td>
+<td>Saber qué cuesta cada cosa.</td>
+</tr>
+<tr>
+<td>ADR-030</td>
+<td>Auditoría</td>
+<td>CloudTrail organizacional, Config (paquete PCI) y Security Hub</td>
+<td>Trazabilidad y hallazgos centralizados.</td>
+</tr>
+<tr>
+<td>ADR-031</td>
+<td>DR</td>
+<td>Pilot light multirregión; DRS descartado</td>
+<td>Cumple RTO/RPO al menor costo; DRS no cubre ECS ni RDS.</td>
+</tr>
+<tr>
+<td>ADR-032</td>
+<td>Blockchain</td>
+<td>No se toca la integración con Stellar</td>
+<td>Sin contexto suficiente; pieza crítica.</td>
+</tr>
+<tr>
+<td>ADR-033</td>
+<td>PCI</td>
+<td>Issuer-processor + segmentación con Lattice dentro de producción</td>
+<td>Alcance mínimo sin mover nada.</td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section id="costos">
+<h1>6. Estimado de costos y recortes</h1>
+<ul>
+<li><strong>Calculadora de AWS:</strong> <em>enlaces pendientes</em>. Las líneas de costos.xlsx y costos-actual.xlsx sirven de especificación para cargarlas.</li>
+<li><strong>Archivos:</strong> cada libro tiene una hoja <code>Supuestos</code> (todas las entradas) y una hoja <code>Estimado</code> (líneas con fórmulas). El del objetivo tiene además una hoja <code>Recortes</code>.</li>
+<li><strong>Servicios fuera de la calculadora:</strong> OpenSearch Serverless NextGen y CloudWatch Omni se calculan solo en el archivo, con los precios de su página.</li>
+</ul>
+<h2>Base del estimado</h2>
+<ul>
+<li>Región us-east-1, en USD.</li>
+<li>Solo precios bajo demanda: sin Spot, sin Savings Plans ni instancias reservadas, sin capa gratuita.</li>
+<li>Todo se trata como producción (S-19).</li>
+<li><strong>Cómputo:</strong> 100 servicios de ECS con 2 vCPU y 4 GB cada uno, como cota superior.</li>
+<li><strong>Balanceadores:</strong> un ALB por servicio.</li>
+<li><strong>Bases:</strong> 30 instancias grandes de RDS PostgreSQL en una zona.</li>
+<li><strong>OpenSearch:</strong> 100 GB.</li>
+<li><strong>Firmas:</strong> 10 millones al mes, con dos <code>c9g.large</code> para el servicio de firma.</li>
+<li><strong>Picos:</strong> de 3 veces, una semana cuatro veces al año, es decir un mes de pico al año. El cómputo y el tráfico usan un factor promedio de (11 + 3) / 12 ≈ 1.17.</li>
+<li><strong>Precios unitarios:</strong> son los de la página de precios de cada servicio y se confirman al cargar la calculadora.</li>
+</ul>
+<h2>Costo mensual: actual frente a objetivo</h2>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Actual (USD / mes)</th>
+<th>Objetivo (USD / mes)</th>
+<th>Diferencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cómputo</td>
+<td>8,409</td>
+<td>6,845</td>
+<td>−1,564</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>2,628</td>
+<td>5,444</td>
+<td>+2,816</td>
+</tr>
+<tr>
+<td>Datos</td>
+<td>12,298</td>
+<td>11,905</td>
+<td>−393</td>
+</tr>
+<tr>
+<td>Llaves y secretos</td>
+<td>130</td>
+<td>142</td>
+<td>+12</td>
+</tr>
+<tr>
+<td>Observabilidad</td>
+<td>1,505</td>
+<td>1,175</td>
+<td>−330</td>
+</tr>
+<tr>
+<td>Gobierno</td>
+<td>0</td>
+<td>260</td>
+<td>+260</td>
+</tr>
+<tr>
+<td>CI/CD</td>
+<td>0</td>
+<td>246</td>
+<td>+246</td>
+</tr>
+<tr>
+<td>DR</td>
+<td>0</td>
+<td>11,262</td>
+<td>+11,262</td>
+</tr>
+<tr>
+<td>Sandboxes</td>
+<td>0</td>
+<td>500</td>
+<td>+500</td>
+</tr>
+<tr>
+<td><strong>Total mensual</strong></td>
+<td><strong>~24,970</strong></td>
+<td><strong>~37,780</strong></td>
+<td><strong>+12,810 (+51 %)</strong></td>
+</tr>
+<tr>
+<td><strong>Total anual</strong></td>
+<td><strong>~299,650</strong></td>
+<td><strong>~453,340</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lo que agrega el objetivo:</strong></p>
+<ul>
+<li>El DR en pilot light, que hoy no existe: casi toda la diferencia es el costo de tener las 30 bases replicadas en otra región.</li>
+<li>VPC Lattice, CloudFront y AWS Client VPN.</li>
+<li>El gobierno (Config, Security Hub), los pipelines y los sandboxes.</li>
+</ul>
+<p><strong>Lo que ahorra:</strong></p>
+<ul>
+<li>Fargate en Graviton.</li>
+<li>La retención de logs con archivo en S3.</li>
+<li>OpenSearch Serverless en lugar de un dominio con nodos fijos.</li>
+</ul>
+<p>Sin DR, el objetivo costaría casi lo mismo que hoy, con mucho más control.</p>
+<p><strong>No incluye:</strong> licencias de New Relic u otra herramienta de APM, la licencia de la VPN actual, el plan de soporte de AWS, impuestos ni el costo del equipo.</p>
+<h2>Dos recortes concretos y el riesgo que agregan</h2>
+<table>
+<thead>
+<tr>
+<th>Recorte</th>
+<th>Ahorro (USD / mes)</th>
+<th>Riesgo que agrega</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. DR solo con copias de AWS Backup entre regiones</strong>, sin réplicas vivas de RDS (ADR-031)</td>
+<td>~9,570</td>
+<td>El RPO pasa de minutos a horas (la frecuencia de las copias) y el RTO crece porque hay que restaurar 30 bases antes de levantar los servicios; el RTO de 1 hora deja de cumplirse.</td>
+</tr>
+<tr>
+<td><strong>2. Reemplazar VPC Lattice por ECS Service Connect</strong> (ADR-017)</td>
+<td>~1,740</td>
+<td>Se pierde la autorización de IAM entre servicios: la segmentación del servicio de firma y de los servicios de tarjetas (PCI) queda solo en security groups, y la comunicación entre VPCs o cuentas vuelve a depender del enrutamiento de red.</td>
+</tr>
+</tbody>
+</table>
+<p>Otros candidatos evaluados, en la hoja <code>Recortes</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Candidato</th>
+<th>Ahorro (USD / mes)</th>
+<th>Riesgo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consolidar los 100 ALB en unos 10</td>
+<td>~1,480</td>
+<td>Mayor radio de impacto si falla un ALB compartido.</td>
+</tr>
+<tr>
+<td>Fargate Spot para el 30 % de los servicios</td>
+<td>~1,410</td>
+<td>Interrupciones con dos minutos de aviso.</td>
+</tr>
+<tr>
+<td>Compute Savings Plan a un año</td>
+<td>~1,370</td>
+<td>Compromiso de gasto aunque el uso baje.</td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section id="seguridad">
+<h1>7. Controles de seguridad de los primeros 90 días</h1>
+<p>Principios: nadie cambia producción a mano, todo queda registrado en CloudTrail, y personas y cargas tienen el mínimo privilegio. Las SCPs gobiernan todas las cuentas de la organización salvo producción, que se controla con IAM mientras se inventaría (ADR-007).</p>
+<table>
+<thead>
+<tr>
+<th>Área</th>
+<th>Días 0 a 30</th>
+<th>Días 31 a 60</th>
+<th>Días 61 a 90</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Accesos</strong></td>
+<td>IAM Identity Center como única entrada; MFA obligatorio; rol <em>break-glass</em> con alerta; inventario de usuarios IAM y llaves de acceso.</td>
+<td>Permission sets de solo lectura en producción; quitar usuarios IAM y llaves de acceso de larga duración.</td>
+<td>Sin permisos de escritura humanos en producción; roles de cargas revisados con IAM Access Analyzer (permisos no usados).</td>
+</tr>
+<tr>
+<td><strong>Secretos y llaves</strong></td>
+<td>Inventario de secretos y de dónde están las llaves de wallets.</td>
+<td>Todo secreto en Secrets Manager / SSM con llave de KMS por cuenta; rotación donde aplique.</td>
+<td>Política de la llave de wallets limitada a la atestación del enclave (ADR-021).</td>
+</tr>
+<tr>
+<td><strong>Red</strong></td>
+<td>Revisar security groups abiertos a internet y reglas del WAF.</td>
+<td>AWS Client VPN con Identity Center en paralelo a la VPN actual.</td>
+<td>Servicios sensibles (tarjetas, firma) detrás de VPC Lattice con políticas de IAM.</td>
+</tr>
+<tr>
+<td><strong>Auditoría</strong></td>
+<td>CloudTrail organizacional hacia Log Archive; AWS Config en todas las cuentas.</td>
+<td>Security Hub en la cuenta Audit; paquete de conformidad PCI DSS de Config.</td>
+<td>Alertas sobre acciones críticas: uso de <em>break-glass</em>, cambios de IAM o de políticas de llaves, cambios fuera del pipeline.</td>
+</tr>
+<tr>
+<td><strong>Respuesta a incidentes</strong></td>
+<td>Guardia 24/7 con dos turnos y canal de escalamiento definido.</td>
+<td>Runbooks para credenciales filtradas, llave comprometida y cambio no autorizado.</td>
+<td>Simulacro de incidente y revisión posterior.</td>
+</tr>
+</tbody>
+</table>
+<h2>Mínimo privilegio</h2>
+<ul>
+<li><strong>Personas:</strong> permission sets por función (lectura, operación en dev, administración de plataforma) asignados por grupo, nunca por usuario. En producción solo lectura; el rol <em>break-glass</em> requiere MFA, deja alerta y se revisa después de cada uso.</li>
+<li><strong>Cargas:</strong> un rol por servicio de ECS con solo las acciones y recursos que usa. El servicio de firma es el único que puede pedir el descifrado de las llaves de wallets, y solo desde el enclave.</li>
+<li><strong>Pipelines:</strong> los roles de IaC se asumen solo desde la cuenta de Deployments, sin credenciales permanentes.</li>
+</ul>
+<h2>SCPs en las cuentas que no son producción</h2>
+<ul>
+<li>Solo regiones aprobadas.</li>
+<li>Prohibido desactivar CloudTrail, Config o Security Hub, o salir de la organización.</li>
+<li>Prohibido crear usuarios IAM o llaves de acceso.</li>
+<li>Recursos sin etiquetas obligatorias rechazados.</li>
+<li>Topes de costo en sandboxes (Innovation Sandbox) y dev (Budgets).</li>
+</ul>
+</section>
+
+<section id="iac">
+<h1>8. Infraestructura como código</h1>
+<p>Esqueleto de Terraform de la arquitectura objetivo. No está pensado para desplegarse tal cual: muestra la estructura, las convenciones y ejemplos concretos de las decisiones de decisiones_full.md. Todos los componentes pasan <code>terraform fmt</code> y <code>terraform validate</code>.</p>
+<h2>Estructura</h2>
+<p>Basada en los patrones de <code>aws-ia</code> y <code>aws-samples</code> (ADR-010): módulos reutilizables en <code>modules/</code> y componentes desplegables en <code>live/&lt;cuenta&gt;/&lt;componente&gt;</code>, cada uno con su propio estado.</p>
+<pre><code>infra/
+├── modules/
+│   ├── ecs-service/          # Ejemplo principal: servicio ECS de la plataforma objetivo
+│   ├── signing-enclave/      # Servicio de firma: Nitro Enclaves + KMS + DynamoDB global
+│   └── search-collection/    # OpenSearch Serverless con el proveedor awscc
+└── live/
+    ├── management/
+    │   └── organization/     # Organización, OUs, SCPs, políticas de etiquetas, Control Tower
+    ├── aft/                  # Account Factory for Terraform
+    └── prod/                 # Cuenta actual, adoptada en IaC
+        ├── network/          # VPC, NAT y Elastic IP importados + service networks de Lattice
+        ├── data/             # RDS importado + réplica en la región de DR
+        ├── services/
+        │   └── payments-api/ # Uso del módulo ecs-service
+        ├── signing/          # Uso del módulo signing-enclave
+        └── search/           # Uso del módulo search-collection
+</code></pre>
+<p>Las cuentas staging, dev, Deployments y el pool de sandboxes se piden a AFT desde su propio repositorio (<code>aft-account-request</code>), un archivo por cuenta.</p>
+<h2>Convenciones</h2>
+<ul>
+<li><strong>Proveedores:</strong> <code>aws</code> por defecto y <code>awscc</code> para capacidades nuevas, como OpenSearch Serverless (ADR-009).</li>
+<li><strong>Estado:</strong> backend S3 con bloqueo nativo (<code>use_lockfile = true</code>), un estado por cuenta y componente. Los componentes comparten identificadores por SSM Parameter Store, no leyendo el estado de otros.</li>
+<li><strong>Acceso:</strong> el pipeline asume un rol de IaC en cada cuenta (<code>deploy_role_arn</code>); ninguna persona aplica cambios en producción (ADR-006).</li>
+<li><strong>Etiquetas:</strong> <code>default_tags</code> del proveedor con <code>environment</code>, <code>component</code>, <code>owner</code> y <code>managed-by</code> (ADR-029).</li>
+<li><strong>Adopción de producción:</strong> bloques <code>import</code> y <code>prevent_destroy</code> para lo sensible; un import solo se aplica con un plan sin cambios (ADR-008).</li>
+</ul>
+<h2>Ejemplo principal: <code>modules/ecs-service</code></h2>
+<p>Un servicio de ECS con las decisiones de la plataforma aplicadas:</p>
+<ul>
+<li>Fargate sobre Graviton (<code>ARM64</code>) y una proporción opcional en Fargate Spot (ADR-013).</li>
+<li>Despliegue blue/green nativo de ECS con <em>circuit breaker</em> y <em>rollback</em> (ADR-026).</li>
+<li>Registro en VPC Lattice para el tráfico entre servicios (ADR-017).</li>
+<li>Colector ADOT como <em>sidecar</em> para OpenTelemetry (ADR-027).</li>
+<li>Grupo de logs con retención (ADR-028).</li>
+<li>Rol de tarea propio con una política de mínimo privilegio, y rol de ejecución que solo lee los secretos del servicio.</li>
+<li>Autoescalado por CPU.</li>
+</ul>
+<p><code>live/prod/services/payments-api</code> muestra cómo se usa.</p>
+<h2>Validar</h2>
+<pre><code class="language-bash">cd infra/live/prod/services/payments-api
+</code></pre>
+<pre><code class="language-bash">terraform init -backend=false
+</code></pre>
+<pre><code class="language-bash">terraform validate
+</code></pre>
+</section>
+
+<section id="anexo">
+<h1>Anexo A. Decisiones en detalle</h1>
+<p>Cada decisión sigue el formato ADR: contexto, opciones, decisión, consecuencias y qué cambiaría la decisión. Las suposiciones en las que se apoyan están en decisiones_short.md. Los números de paso (<code>O1</code>–<code>O8</code> y <code>1</code>–<code>14</code>) hacen referencia a los diagramas de arquitectura.md.</p>
+<h2>Tabla de Contenidos</h2>
+<p><strong>Organización y gobierno</strong></p>
+<ol>
+<li>ADR-001: Organización de AWS con una cuenta de administración nueva</li>
+<li>ADR-002: La cuenta actual se mantiene como cuenta de producción</li>
+<li>ADR-003: Estructura de OUs y cuentas</li>
+<li>ADR-004: AFT sobre Control Tower para crear cuentas</li>
+<li>ADR-005: Innovation Sandbox on AWS para los sandboxes</li>
+<li>ADR-006: Acceso humano de solo lectura en producción</li>
+<li>ADR-007: SCPs en todas las cuentas excepto producción</li>
+</ol>
+<p><strong>Infraestructura como código</strong></p>
+<ol start="8">
+<li>ADR-008: Todo a IaC: importar lo sensible, reconstruir lo efímero</li>
+<li>ADR-009: Terraform con los proveedores aws y awscc</li>
+<li>ADR-010: Estructura del repositorio y estado de Terraform</li>
+</ol>
+<p><strong>Migración y modernización</strong></p>
+<ol start="11">
+<li>ADR-011: La migración es una limpieza de la cuenta de producción</li>
+<li>ADR-012: Rehost o rebuild del no productivo según la carga</li>
+<li>ADR-013: Modernización del cómputo en ECS</li>
+<li>ADR-014: Modernización de RDS según motor y propósito</li>
+<li>ADR-015: OpenSearch Serverless NextGen</li>
+<li>ADR-016: Temporal se mantiene self-hosted durante 12 meses</li>
+</ol>
+<p><strong>Red y acceso</strong></p>
+<ol start="17">
+<li>ADR-017: VPC Lattice en lugar de Transit Gateway</li>
+<li>ADR-018: Ingreso con CloudFront, WAF y ALB sin cambios</li>
+<li>ADR-019: AWS Client VPN e IAM Identity Center para el equipo</li>
+<li>ADR-020: DNS, IPs y direcciones de salida sin cambios</li>
+</ol>
+<p><strong>Llaves y secretos</strong></p>
+<ol start="21">
+<li>ADR-021: Llaves de firma de wallets con Nitro Enclaves, KMS y DynamoDB</li>
+<li>ADR-022: Las llaves permanecen en la cuenta de producción</li>
+<li>ADR-023: Origen de las llaves: conservar, importar o generar fuera e importar</li>
+<li>ADR-024: Secretos de configuración en Secrets Manager y SSM</li>
+</ol>
+<p><strong>CI/CD</strong></p>
+<ol start="25">
+<li>ADR-025: CodePipeline y CodeBuild en una cuenta de Deployments</li>
+<li>ADR-026: Despliegues blue/green nativos de ECS</li>
+</ol>
+<p><strong>Observabilidad, FinOps y seguridad</strong></p>
+<ol start="27">
+<li>ADR-027: OpenTelemetry como capa de desacople de observabilidad</li>
+<li>ADR-028: Retención de logs y archivo en S3 con Athena</li>
+<li>ADR-029: FinOps: etiquetado obligatorio, presupuestos y anomalías</li>
+<li>ADR-030: CloudTrail organizacional, AWS Config y Security Hub</li>
+</ol>
+<p><strong>Resiliencia, blockchain y cumplimiento</strong></p>
+<ol start="31">
+<li>ADR-031: DR pilot light en una segunda región, sin DRS</li>
+<li>ADR-032: No tocar la infraestructura blockchain</li>
+<li>ADR-033: Reducción del alcance PCI con issuer-processor y segmentación</li>
+</ol>
+<hr />
+<h2>ADR-001: Organización de AWS con una cuenta de administración nueva</h2>
+<h3>Contexto</h3>
+<p>Hoy hay una sola cuenta donde conviven producción y no productivo. Se necesita separar entornos, gobernar con políticas y consolidar la facturación. La cuenta que crea la organización (cuenta de administración) tiene privilegios especiales y las SCPs no le aplican.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Crear la organización desde la cuenta actual de producción.</li>
+<li>Crear una cuenta nueva solo para administrar la organización e invitar a la cuenta actual.</li>
+<li>Seguir con una sola cuenta y separar entornos con etiquetas y roles.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Se crea una cuenta de administración nueva, sin cargas de trabajo, con AWS Organizations, Control Tower, IAM Identity Center y la facturación consolidada (paso <code>O1</code>). La cuenta actual se invita como miembro.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sigue la práctica recomendada por AWS de no desplegar cargas en la cuenta de administración.</li>
+<li>Un compromiso de producción no compromete la organización completa.</li>
+<li>Unirse a una organización no cambia el ID de la cuenta, y las RIs y Savings Plans se quedan con ella.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>La cuenta nueva pasa a ser la pagadora: hay que revisar antes de invitar a producción los acuerdos atados al pagador (EDP o precios privados, ofertas privadas de Marketplace, plan de soporte).</li>
+<li>Una cuenta más que administrar.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que exista un acuerdo comercial atado a la cuenta actual como pagadora que no se pueda transferir.</li>
+</ul>
+<hr />
+<h2>ADR-002: La cuenta actual se mantiene como cuenta de producción</h2>
+<h3>Contexto</h3>
+<p>Crear una cuenta de producción nueva implicaría mover más de 100 servicios, hasta 30 bases de datos, llaves de KMS (que no se pueden mover entre cuentas), IPs registradas en proveedores y DNS, en un sistema financiero 24/7.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Nueva cuenta de producción y migrar todo.</li>
+<li>Mantener la cuenta actual como producción y sacar todo lo demás.</li>
+</ul>
+<h3>Decisión</h3>
+<p>La cuenta actual se queda como producción (paso <code>O4</code>). Lo que sale es todo lo que no es producción (ver ADR-011).</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Producción no se mueve: es el principal argumento de cero downtime.</li>
+<li>Se conservan IDs, IPs, DNS, llaves de KMS, cuotas y descuentos.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>La cuenta arrastra deuda histórica (recursos huérfanos, permisos amplios) que hay que limpiar en sitio.</li>
+<li>No se obtiene una cuenta "limpia" de producción desde el día uno.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que la cuenta actual estuviera comprometida o que la deuda fuera tan grande que limpiar en sitio fuera más riesgoso que mover.</li>
+</ul>
+<hr />
+<h2>ADR-003: Estructura de OUs y cuentas</h2>
+<h3>Contexto</h3>
+<p>Se necesita una estructura simple que un equipo de 10 ingenieros pueda operar, alineada con las guías de AWS para entornos multicuenta.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Cuentas por entorno (prod, staging, dev).</li>
+<li>Cuentas por entorno y por dominio (pagos, wallets, tarjetas).</li>
+</ul>
+<h3>Decisión</h3>
+<p>Cuentas por entorno, con estas OUs (diagrama de organización):</p>
+<table>
+<thead>
+<tr>
+<th>OU</th>
+<th>Cuentas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security</td>
+<td>Log Archive, Audit (las crea Control Tower)</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td>AFT management, Deployments</td>
+</tr>
+<tr>
+<td>Workloads / Prod (transitoria)</td>
+<td>Producción (cuenta actual)</td>
+</tr>
+<tr>
+<td>Workloads / NonProd</td>
+<td>Staging, Dev</td>
+</tr>
+<tr>
+<td>Sandbox</td>
+<td>Pool de Innovation Sandbox</td>
+</tr>
+</tbody>
+</table>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Pocas cuentas, fáciles de operar con un equipo pequeño.</li>
+<li>Separa entornos y reduce el radio de impacto entre ellos.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Dentro de producción no hay separación por dominio a nivel de cuenta; se compensa con VPC Lattice, IAM y segmentación (ADR-017, ADR-033).</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Crecimiento del equipo a varios equipos autónomos por dominio, o un requisito regulatorio de aislar un dominio por cuenta.</li>
+</ul>
+<hr />
+<h2>ADR-004: AFT sobre Control Tower para crear cuentas</h2>
+<h3>Contexto</h3>
+<p>El requisito de IaC es Terraform. Las opciones de AWS para crear y personalizar cuentas son Account Factory for Terraform (AFT) y Landing Zone Accelerator (LZA).</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>LZA: más controles de cumplimiento, pero está construido en CDK y se configura con YAML propio.</li>
+<li>AFT: nativo de Terraform, sobre Control Tower.</li>
+<li>Organizations sin Control Tower, todo a mano en Terraform.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Control Tower con AFT (paso <code>O3</code>). Se descarta LZA porque es CDK y obligaría a mantener dos herramientas de IaC.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Una sola herramienta de IaC para la plataforma y las cargas.</li>
+<li>Cuentas nuevas con línea base (roles, presupuestos, etiquetas) desde el primer minuto.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>AFT trae menos controles de cumplimiento listos que LZA; se completan con Config y Security Hub (ADR-030).</li>
+<li>AFT agrega su propia cuenta y su propio pipeline que operar.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el requisito de Terraform se relajara y el peso regulatorio justificara LZA.</li>
+</ul>
+<hr />
+<h2>ADR-005: Innovation Sandbox on AWS para los sandboxes</h2>
+<h3>Contexto</h3>
+<p>Los ingenieros necesitan experimentar sin tocar producción ni acumular costos olvidados.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Una cuenta sandbox compartida.</li>
+<li>Innovation Sandbox on AWS con un pool de cuentas temporales.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Innovation Sandbox on AWS con un pool de cuentas pequeñas y limitadas creadas por AFT (paso <code>O6</code>). Innovation Sandbox mueve cuentas entre OUs y Control Tower lo reporta como drift; se acepta y se usa como señal de monitoreo.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Presupuesto y limpieza automática por cuenta prestada.</li>
+<li>Los experimentos no ensucian dev ni producción.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Alertas de drift en Control Tower que hay que saber filtrar.</li>
+<li>La solución no crea cuentas; el pool se crea y se mantiene aparte.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el costo o la operación del pool supere su uso real; se volvería a una cuenta sandbox con presupuesto.</li>
+</ul>
+<hr />
+<h2>ADR-006: Acceso humano de solo lectura en producción</h2>
+<h3>Contexto</h3>
+<p>Hoy los cambios se hacen a mano en la consola. Para que la IaC sea la fuente de verdad, nadie debe poder cambiar producción fuera del pipeline.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Acceso de administrador con aprobación manual.</li>
+<li>Solo lectura para personas; cambios solo por roles de IaC; rol de emergencia.</li>
+</ul>
+<h3>Decisión</h3>
+<p>En producción, todas las personas tienen solo lectura (vía IAM Identity Center). Solo los roles que asume el pipeline de Terraform y de despliegue pueden mutar recursos. Existe un rol <em>break-glass</em> con MFA, alerta inmediata y revisión posterior. Todo queda en CloudTrail.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>La consola deja de ser una vía de cambio; el drift se vuelve excepción.</li>
+<li>Mínimo privilegio para humanos y cargas.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Las emergencias dependen del rol <em>break-glass</em> y de un pipeline rápido.</li>
+<li>Requiere disciplina y un pipeline confiable antes de quitar permisos.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Nada a mediano plazo; solo se ajustaría qué lecturas se permiten (por ejemplo, ocultar datos sensibles en consola).</li>
+</ul>
+<hr />
+<h2>ADR-007: SCPs en todas las cuentas excepto producción</h2>
+<h3>Contexto</h3>
+<p>Las SCPs limitan lo que puede hacer cualquier identidad de una cuenta. Aplicarlas de golpe a una cuenta de producción construida a mano puede romper flujos que nadie documentó.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>SCPs restrictivas en todas las cuentas, incluida producción.</li>
+<li>SCPs restrictivas en las cuentas nuevas; producción en una OU transitoria sin SCPs restrictivas.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Las cuentas nuevas (staging, dev, sandboxes, seguridad, infraestructura) tienen SCPs restrictivas desde el inicio (regiones permitidas, no desactivar CloudTrail/Config, no salir de la organización, etc.). Producción vive en una OU transitoria sin SCPs restrictivas; su control principal es IAM (ADR-006).</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Cero riesgo de que una SCP corte un flujo de producción no documentado.</li>
+<li>Las cuentas nuevas nacen gobernadas.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Producción depende de IAM y de la disciplina del pipeline, sin la red de seguridad de las SCPs.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Una vez inventariados los flujos de producción, se podrían agregar SCPs mínimas de bajo riesgo (no desactivar CloudTrail, no salir de la organización) usando el análisis de <em>last accessed</em> de IAM.</li>
+</ul>
+<hr />
+<h2>ADR-008: Todo a IaC: importar lo sensible, reconstruir lo efímero</h2>
+<h3>Contexto</h3>
+<p>Toda la infraestructura se creó a mano. Recrear recursos con estado o expuestos a clientes es riesgoso; recrear recursos sin estado es barato.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Importar todo al estado de Terraform.</li>
+<li>Reconstruir todo desde cero.</li>
+<li>Mezcla según el tipo de recurso.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Se <strong>importa</strong> con bloques <code>import</code> todo lo que da la cara al cliente o es sensible: VPCs, ALBs, WAF, DNS, RDS, OpenSearch, KMS, DynamoDB, certificados. Se <strong>reconstruye</strong> lo efímero y sin estado: servicios y task definitions de ECS, configuración de clusters. La regla de importación es "plan sin cambios": un import solo se aplica si <code>terraform plan</code> no muestra diferencias.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Se adopta producción sin tocarla.</li>
+<li>Lo reconstruido queda limpio y estandarizado desde el inicio.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Importar es lento y manual; hay que generar y revisar la configuración de cientos de recursos (se puede acelerar con <code>terraform plan -generate-config-out</code> y asistentes de IA).</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Si un recurso importado no se puede describir sin cambios, se reemplaza con una estrategia blue/green en lugar de forzarlo.</li>
+</ul>
+<hr />
+<h2>ADR-009: Terraform con los proveedores aws y awscc</h2>
+<h3>Contexto</h3>
+<p>El requisito es Terraform. Algunos servicios nuevos o capacidades poco comunes aparecen antes en el proveedor <code>awscc</code> (generado desde la API de Cloud Control) que en el proveedor <code>aws</code>.</p>
+<h3>Decisión</h3>
+<p>Terraform con el proveedor <code>aws</code> por defecto y <code>awscc</code> para servicios o capacidades que aún no estén en <code>aws</code> (por ejemplo, opciones nuevas de OpenSearch Serverless NextGen).</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Acceso temprano a capacidades nuevas sin salir de Terraform.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Dos proveedores con convenciones distintas; hay que documentar cuándo usar cada uno.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que todo lo necesario esté en el proveedor <code>aws</code>; <code>awscc</code> quedaría sin uso.</li>
+</ul>
+<hr />
+<h2>ADR-010: Estructura del repositorio y estado de Terraform</h2>
+<h3>Contexto</h3>
+<p>No hay experiencia previa en el equipo con un layout de Terraform. Conviene seguir patrones conocidos.</p>
+<h3>Decisión</h3>
+<ul>
+<li>Layout basado en los patrones de <code>aws-ia</code> y <code>aws-samples</code>: <code>modules/</code> reutilizables y <code>live/&lt;cuenta&gt;/&lt;componente&gt;</code> desplegables.</li>
+<li>Backend S3 con bloqueo nativo (<code>use_lockfile</code>), un estado por cuenta y componente.</li>
+<li>Ver el README de infra.</li>
+</ul>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Estados pequeños: un <code>plan</code> afecta poco y es rápido.</li>
+<li>Patrones reconocibles por cualquier ingeniero nuevo.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Más estados que coordinar; las dependencias entre componentes se resuelven con datos remotos o SSM.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el número de componentes crezca tanto que convenga una herramienta de orquestación (por ejemplo, Terragrunt o stacks de Terraform).</li>
+</ul>
+<hr />
+<h2>ADR-011: La migración es una limpieza de la cuenta de producción</h2>
+<h3>Contexto</h3>
+<p>La guía de AWS para migraciones grandes clasifica cada carga con las 7R (retire, retain, rehost, relocate, repurchase, replatform, refactor). Aquí todo ya está en AWS; el problema es que producción y no productivo están mezclados.</p>
+<h3>Decisión</h3>
+<ul>
+<li>Producción: <strong>retain</strong>. Se queda en su cuenta y se adopta en IaC y gobierno.</li>
+<li>No productivo: sale a staging y dev (ADR-012).</li>
+<li>Lo huérfano: <strong>retire</strong>.</li>
+<li>La modernización (replatform, refactor) viene después, servicio por servicio (ADR-013 a ADR-016).</li>
+</ul>
+<p>Las herramientas de migración de servidores (MGN, AWS Transform) aplican a modernizaciones futuras y al no productivo donde haya servidores; producción son contenedores y datos administrados.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Cero downtime: lo que se mueve no es producción.</li>
+<li>Las herramientas de migración no tocan la infraestructura de producción.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Hay que separar con precisión qué es producción y qué no en una cuenta sin etiquetas; es el riesgo principal de la fase de inventario.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Encontrar dependencias de producción hacia recursos no productivos (por ejemplo, un servicio productivo que lee una base "de pruebas"); ese recurso se reclasifica como producción.</li>
+</ul>
+<hr />
+<h2>ADR-012: Rehost o rebuild del no productivo según la carga</h2>
+<h3>Contexto</h3>
+<p>El no productivo puede moverse tal cual (rehost/relocate) o reconstruirse desde IaC (rebuild).</p>
+<h3>Decisión</h3>
+<p>Se decide por carga y se deja abierto a propósito. Criterio guía: si ya existe la definición en IaC o es sin estado, se reconstruye; si tiene estado o configuración difícil de reproducir, se mueve (snapshots compartidos, réplicas).</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Flexibilidad para no bloquear la limpieza en las cargas difíciles.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Sin una regla única, hay que justificar cada caso.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Un inventario que muestre que casi todo es reconstruible; entonces se reconstruye todo.</li>
+</ul>
+<hr />
+<h2>ADR-013: Modernización del cómputo en ECS</h2>
+<h3>Contexto</h3>
+<p>Hay hasta 100 servicios en muchos clusters, sin datos de uso. El equipo ya conoce ECS.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Migrar a EKS.</li>
+<li>Quedarse en ECS y optimizar.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Se queda en ECS (paso <code>2</code>). Después de la migración:</p>
+<ul>
+<li>Reorganizar clusters por dominio y entorno.</li>
+<li>Fargate y Graviton en todo lo posible; rightsizing con métricas reales.</li>
+<li>Fargate Spot donde la carga tolere interrupciones.</li>
+<li>A largo plazo y por carga: dividir monolitos, o pasar APIs simples a Lambda y API Gateway.</li>
+</ul>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Menos operación (sin nodos que parchar) y menor costo por Graviton y rightsizing.</li>
+<li>Sin curva de aprendizaje de Kubernetes.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Algunas imágenes tendrán que compilarse para ARM64.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Necesidades que solo cubra Kubernetes (operadores específicos, portabilidad multinube).</li>
+</ul>
+<hr />
+<h2>ADR-014: Modernización de RDS según motor y propósito</h2>
+<h3>Contexto</h3>
+<p>Hasta 30 bases con motores, tamaños y configuraciones diversos y sin datos de uso.</p>
+<h3>Decisión</h3>
+<p>Se evalúa base por base: rightsizing y autoscaling de almacenamiento, o migración a Aurora cuando el motor lo permite y el uso lo justifica. Los cambios se hacen con RDS Blue/Green Deployments o promoviendo réplicas de lectura de Aurora, para cortes de segundos.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Ahorro y elasticidad sin downtime perceptible.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Cada base requiere pruebas propias; es la parte más lenta del plan.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Motores sin camino a Aurora; se quedan en RDS con rightsizing.</li>
+</ul>
+<hr />
+<h2>ADR-015: OpenSearch Serverless NextGen</h2>
+<h3>Contexto</h3>
+<p>Hay dominios de OpenSearch administrados con configuración desconocida. La nueva generación de OpenSearch Serverless (GA en mayo de 2026) escala hasta cero y cobra por uso.</p>
+<h3>Decisión</h3>
+<p>Migrar a OpenSearch Serverless NextGen como parte de la modernización, con doble escritura y cambio de alias para no tener downtime.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sin clusters que dimensionar; costo alineado con el uso.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Servicio nuevo: hay que validar compatibilidad de funcionalidades y que esté en la calculadora de precios (si no, se estima aparte).</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Funcionalidades que solo existan en dominios administrados, o un uso constante tan alto que el aprovisionado sea más barato.</li>
+</ul>
+<hr />
+<h2>ADR-016: Temporal se mantiene self-hosted durante 12 meses</h2>
+<h3>Contexto</h3>
+<p>Temporal orquesta los flujos de negocio y se asume self-hosted en ECS. El equipo lo conoce.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Temporal Cloud.</li>
+<li>Reescribir flujos en Step Functions, MWAA o Glue.</li>
+<li>Mantenerlo como está.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Se mantiene self-hosted en ECS (paso <code>2</code>) durante los 12 meses. No se migra a Temporal Cloud (sería otra migración) ni se reescriben los flujos. A futuro se pueden mover flujos puntuales a Step Functions con EventBridge, o a Glue, si hay un caso de costo de largo plazo.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Se aprovecha la experiencia del equipo y no se agrega riesgo.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Se sigue operando Temporal y su persistencia.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que la operación de Temporal consuma una parte relevante del tiempo del equipo.</li>
+</ul>
+<hr />
+<h2>ADR-017: VPC Lattice en lugar de Transit Gateway</h2>
+<h3>Contexto</h3>
+<p>Al separar entornos y segmentar servicios sensibles, los servicios necesitan conectarse entre VPCs y cuentas con control de acceso.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Transit Gateway con reglas de red.</li>
+<li>VPC peering.</li>
+<li>VPC Lattice.</li>
+</ul>
+<h3>Decisión</h3>
+<p>VPC Lattice para la comunicación entre servicios (paso <code>3</code>): service networks con políticas de autenticación de IAM, integrado de forma nativa con ECS.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Modelo de confianza cero entre servicios con IAM, sin administrar TLS en cada ALB interno.</li>
+<li>No importan los CIDR superpuestos entre VPCs.</li>
+<li>Útil para segmentar los servicios de tarjetas y el servicio de firma.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Más costoso que TGW o peering a igual tráfico; se acepta.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el costo de Lattice resulte desproporcionado frente al tráfico real.</li>
+</ul>
+<hr />
+<h2>ADR-018: Ingreso con CloudFront, WAF y ALB sin cambios</h2>
+<h3>Contexto</h3>
+<p>WAF ya está en uso. El ingreso de clientes es lo más sensible a cambios.</p>
+<h3>Decisión</h3>
+<p>Se mantiene CloudFront, WAF y ALB (paso <code>1</code>). El uso de ALBs depende de cada servicio; la modernización puede consolidarlos.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Cero cambio visible para los clientes.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Se heredan las configuraciones actuales hasta que se importen y revisen.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Necesidades nuevas de ingreso (por ejemplo, APIs privadas para socios).</li>
+</ul>
+<hr />
+<h2>ADR-019: AWS Client VPN e IAM Identity Center para el equipo</h2>
+<h3>Contexto</h3>
+<p>El equipo usa una VPN de proveedor desconocido.</p>
+<h3>Decisión</h3>
+<p>AWS Client VPN autenticado con IAM Identity Center para la red (paso <code>12</code>), e Identity Center para el acceso a AWS. Se corre en paralelo con la VPN actual hasta el corte.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Una sola identidad para red y AWS, auditada en CloudTrail.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Costo por conexión y por asociación de subred.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el acceso a la red deje de ser necesario (todo por SSM Session Manager o Verified Access).</li>
+</ul>
+<hr />
+<h2>ADR-020: DNS, IPs y direcciones de salida sin cambios</h2>
+<h3>Contexto</h3>
+<p>Los proveedores de pagos suelen tener en lista blanca las IPs de salida de Kova.</p>
+<h3>Decisión</h3>
+<p>No se cambian DNS, IPs públicas ni NAT con Elastic IPs (paso <code>7</code>). Al quedarse producción en su cuenta, esto se cumple sin esfuerzo adicional.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sin coordinación con proveedores ni riesgo de cortes por listas blancas.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Ninguna relevante.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Un cambio de región o de cuenta de producción, que obligaría a coordinar nuevas IPs con cada proveedor.</li>
+</ul>
+<hr />
+<h2>ADR-021: Llaves de firma de wallets con Nitro Enclaves, KMS y DynamoDB</h2>
+<h3>Contexto</h3>
+<p>Kova firma transacciones en Stellar (curva Ed25519) para un número alto de wallets. Las opciones de AWS son:</p>
+<ul>
+<li>KMS con una llave asimétrica por wallet: soporta Ed25519 y nunca expone la llave, pero cuesta alrededor de 1 USD por llave al mes, más cada solicitud de firma.</li>
+<li>CloudHSM: soporta Ed25519 (solo en clusters no FIPS), pero un hsm1.medium cuesta 1.60 USD por hora, unos 1,168 USD al mes en us-east-1, y se necesitan al menos dos para alta disponibilidad, 24/7.</li>
+<li>Secrets Manager por llave: costo por secreto al mes, sin aislamiento al usarla.</li>
+<li>Cifrado de sobre: llaves cifradas con una llave de KMS y guardadas en DynamoDB, descifradas solo dentro de un Nitro Enclave.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Cifrado de sobre con Nitro Enclaves (pasos <code>5</code> y <code>6</code>):</p>
+<ol>
+<li>Cada llave de wallet se guarda cifrada en DynamoDB (o en la base RDS actual, si es donde viven hoy).</li>
+<li>La llave de KMS que las cifra solo permite <code>Decrypt</code> cuando la solicitud trae un documento de atestación del enclave con la imagen esperada (<code>kms:RecipientAttestation:ImageSha384</code>).</li>
+<li>El servicio de firma corre en un grupo de autoescalado de EC2 con Nitro Enclaves. ECS no documenta soporte para enclaves, así que va fuera de ECS.</li>
+<li>El enclave descifra, firma y descarta la llave; la llave en claro nunca sale del enclave.</li>
+<li>La llave de KMS es multi-Región y la tabla es global, para el DR (ADR-031).</li>
+</ol>
+<p>Es el patrón documentado por AWS para custodia de llaves de blockchain (blog de Web3 sobre Nitro Enclaves) y el recomendado por expertos de AWS para miles de wallets.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Costo de KMS independiente del número de wallets: una llave y solicitudes de descifrado.</li>
+<li>La llave en claro solo existe dentro del enclave, fuera del alcance del sistema operativo y de los administradores.</li>
+<li>DynamoDB escala sin límites prácticos de llaves.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Agrega EC2 al stack de cómputo (no es Fargate) y un ciclo de despliegue de imágenes de enclave.</li>
+<li>Cambiar la imagen del enclave exige actualizar la política de la llave.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Pocas wallets (decenas): KMS con una llave asimétrica por wallet sería más simple.</li>
+<li>Volumen de firmas extremo o un requisito FIPS 140 nivel 3 dedicado: CloudHSM.</li>
+</ul>
+<hr />
+<h2>ADR-022: Las llaves permanecen en la cuenta de producción</h2>
+<h3>Contexto</h3>
+<p>Lo ideal sería una cuenta de custodia separada. Pero las llaves de KMS no se pueden mover entre cuentas, y moverlas implicaría reprovisionar producción.</p>
+<h3>Decisión</h3>
+<p>Las llaves y el servicio de firma se quedan en la cuenta de producción, aislados por red (Lattice), IAM y la política de la llave.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sin riesgo de interrupción por mover llaves.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Menor aislamiento que una cuenta dedicada.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Un requisito regulatorio explícito de separar la custodia en otra cuenta.</li>
+</ul>
+<hr />
+<h2>ADR-023: Origen de las llaves: conservar, importar o generar fuera e importar</h2>
+<h3>Contexto</h3>
+<p>No se sabe dónde están hoy las llaves de las wallets.</p>
+<h3>Decisión</h3>
+<ul>
+<li>Si ya están en KMS: se conservan.</li>
+<li>Si están fuera de AWS: se importan (KMS admite importar material Ed25519).</li>
+<li>Si no existen: se generan fuera y se importan, para no quedar atados a un proveedor.</li>
+</ul>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Portabilidad y sin cambios innecesarios.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Generar fuera exige una ceremonia de llaves y custodia del material original.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que no se requiera portabilidad; entonces se generan dentro del enclave.</li>
+</ul>
+<hr />
+<h2>ADR-024: Secretos de configuración en Secrets Manager y SSM</h2>
+<h3>Contexto</h3>
+<p>Se asume que Kova ya sigue la práctica recomendada.</p>
+<h3>Decisión</h3>
+<p>Secretos de configuración en Secrets Manager (con rotación donde aplique) y parámetros en SSM Parameter Store <code>SecureString</code> (paso <code>8</code>), cifrados con llaves de KMS por cuenta.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sin secretos en código ni en variables de entorno planas.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Costo por secreto en Secrets Manager.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el inventario muestre secretos fuera de estos servicios; se migran.</li>
+</ul>
+<hr />
+<h2>ADR-025: CodePipeline y CodeBuild en una cuenta de Deployments</h2>
+<h3>Contexto</h3>
+<p>Se quiere CI/CD dentro de AWS. El código queda en GitHub (o su host actual). Hoy no hay pipelines: los cambios se hacen a mano.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Pipelines dentro de cada cuenta de destino.</li>
+<li>Pipelines en la cuenta de AFT.</li>
+<li>Pipelines en una cuenta de Deployments dedicada, como recomienda la guía de AWS para entornos multicuenta.</li>
+</ul>
+<h3>Decisión</h3>
+<p>CodePipeline y CodeBuild en una cuenta de Deployments (pasos <code>O7</code> y <code>11</code>), conectados a GitHub con CodeConnections. No se usa CodeCommit. Los pipelines despliegan en cada cuenta asumiendo roles de IaC; ECR replica las imágenes a las cuentas y a la región de DR.</p>
+<p>Hay cuatro tipos de pipeline:</p>
+<table>
+<thead>
+<tr>
+<th>Pipeline</th>
+<th>Uno por</th>
+<th>Etapas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Infraestructura (Terraform)</td>
+<td>Cuenta y componente (<code>infra/live/...</code>)</td>
+<td>Fuente → <code>fmt</code>, <code>validate</code> y revisión de políticas → <code>plan</code> guardado como artefacto → aprobación manual para producción → <code>apply</code> con un rol distinto al del <code>plan</code></td>
+</tr>
+<tr>
+<td>Aplicación</td>
+<td>Servicio de ECS</td>
+<td>Fuente → build de la imagen arm64 → pruebas → escaneo de la imagen (ECR con Amazon Inspector) → push a ECR con etiquetas inmutables → despliegue en dev → staging → aprobación → producción con blue/green nativo de ECS (ADR-026)</td>
+</tr>
+<tr>
+<td>Imagen del enclave</td>
+<td>Servicio de firma</td>
+<td>Build de la imagen del enclave → medición del PCR0 → Terraform actualiza la política de la llave de KMS con el nuevo PCR0 → renovación de instancias del grupo de autoescalado; aprobación de dos personas (ADR-021)</td>
+</tr>
+<tr>
+<td>Cuentas (AFT)</td>
+<td>Solicitud de cuenta</td>
+<td>Los administra AFT (ADR-004)</td>
+</tr>
+</tbody>
+</table>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Todo dentro de AWS y auditado en CloudTrail.</li>
+<li>Los pipelines no tienen credenciales permanentes en las cuentas destino.</li>
+<li>El <code>plan</code> revisado es exactamente lo que se aplica.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>CodePipeline es menos flexible que otras herramientas de CI.</li>
+<li>Una cuenta más que operar.</li>
+</ul>
+<h4>Riesgos de seguridad y mitigaciones</h4>
+<p>La cuenta de Deployments puede asumir los roles que cambian producción, así que pasa a ser el objetivo más valioso de la organización. Quien la controle, o controle un repositorio, puede desplegar en producción.</p>
+<table>
+<thead>
+<tr>
+<th>Riesgo</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compromiso de la cuenta de Deployments</td>
+<td>SCPs restrictivas; ninguna persona con escritura; alertas de CloudTrail sobre cambios en pipelines, roles y conexiones</td>
+</tr>
+<tr>
+<td>Abuso de los roles de IaC en las cuentas destino</td>
+<td>Política de confianza que solo admite el rol de cada pipeline (con condición <code>aws:SourceAccount</code>); roles separados de <code>plan</code> (solo lectura) y <code>apply</code>; permisos mínimos por componente</td>
+</tr>
+<tr>
+<td>Cambio malicioso o erróneo desde el repositorio (cadena de suministro)</td>
+<td>CodeConnections limitado a repositorios específicos; ramas protegidas y revisión obligatoria en GitHub; aprobación manual antes de producción</td>
+</tr>
+<tr>
+<td>Imagen o dependencia comprometida</td>
+<td>Escaneo de imágenes, etiquetas inmutables en ECR y, opcionalmente, firma de imágenes</td>
+</tr>
+<tr>
+<td>Filtración de artefactos (planes de Terraform con datos sensibles)</td>
+<td>Buckets de artefactos cifrados con KMS, acceso solo para los roles del pipeline, ciclo de vida corto</td>
+</tr>
+<tr>
+<td>Cambio de la imagen del enclave para robar llaves</td>
+<td>El PCR0 solo cambia con aprobación de dos personas y queda registrado en CloudTrail</td>
+</tr>
+</tbody>
+</table>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que el equipo dependa mucho de GitHub Actions; se usaría OIDC hacia los mismos roles de IaC, con las mismas mitigaciones.</li>
+<li>Preferir menos cuentas: los pipelines podrían vivir en la cuenta de AFT, aceptando concentrar más privilegios en ella.</li>
+</ul>
+<hr />
+<h2>ADR-026: Despliegues blue/green nativos de ECS</h2>
+<h3>Contexto</h3>
+<p>ECS ahora soporta blue/green de forma nativa, sin CodeDeploy.</p>
+<h3>Decisión</h3>
+<p>Despliegues blue/green nativos de ECS (paso <code>11</code>), con <em>circuit breaker</em> y <em>rollback</em> automático. Sin CodeDeploy.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Menos piezas y configuración en Terraform sin archivos AppSpec.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Según la documentación consultada, el blue/green nativo cambia todo el tráfico de una vez (sin <em>canary</em> ni lineal); se revisa si eso cambió.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Servicios que requieran <em>canary</em>; se usaría CodeDeploy solo para ellos.</li>
+</ul>
+<hr />
+<h2>ADR-027: OpenTelemetry como capa de desacople de observabilidad</h2>
+<h3>Contexto</h3>
+<p>Hoy se usa New Relic y se evalúa cambiar de herramienta. Cambiar de herramienta suele implicar re-instrumentar todo.</p>
+<h3>Decisión</h3>
+<p>Todo servicio emite logs, métricas y trazas con OpenTelemetry hacia un colector ADOT (paso <code>9</code>). New Relic se mantiene durante la migración. Luego se evalúan, con los mismos datos, CloudWatch y CloudWatch Omni, Amazon Managed Grafana con Managed Prometheus, y Datadog como un candidato más.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Cambiar de herramienta pasa a ser cambiar el destino del colector.</li>
+<li>Permite enviar a dos herramientas en paralelo durante la evaluación.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Instrumentar con OpenTelemetry es un esfuerzo inicial en cada servicio.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Nada; la elección de herramienta final queda fuera de esta decisión.</li>
+</ul>
+<hr />
+<h2>ADR-028: Retención de logs y archivo en S3 con Athena</h2>
+<h3>Contexto</h3>
+<p>Los logs sin retención crecen sin control y son una de las fuentes de costo que más se escapa.</p>
+<h3>Decisión</h3>
+<p>Todo grupo de logs y almacén de trazas tiene retención definida (paso <code>10</code>). Los logs que hay que conservar más tiempo se exportan a S3 con ciclo de vida y se consultan con Athena.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Costo de logs predecible.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Consultar logs viejos es más lento (Athena en lugar de la herramienta de observabilidad).</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Requisitos regulatorios de retención; ajustan los plazos, no el mecanismo.</li>
+</ul>
+<hr />
+<h2>ADR-029: FinOps: etiquetado obligatorio, presupuestos y anomalías</h2>
+<h3>Contexto</h3>
+<p>Sin etiquetas no se sabe qué cuesta cada servicio ni qué es producción.</p>
+<h3>Decisión</h3>
+<ul>
+<li>Etiquetas obligatorias en todo recurso (políticas de etiquetas de Organizations y validación en el pipeline).</li>
+<li>AWS Budgets por cuenta, alertas de facturación y Cost Anomaly Detection.</li>
+<li>Topes de costo en sandboxes y dev.</li>
+</ul>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Costo por servicio y por entorno visible; detecta gastos inesperados pronto.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Etiquetar lo existente es trabajo manual en la fase de inventario.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Nada; es la base para estimar y recortar costos.</li>
+</ul>
+<hr />
+<h2>ADR-030: CloudTrail organizacional, AWS Config y Security Hub</h2>
+<h3>Contexto</h3>
+<p>Sin auditoría centralizada no hay forma de saber quién cambió qué ni de detectar desviaciones.</p>
+<h3>Decisión</h3>
+<p>CloudTrail organizacional hacia Log Archive, AWS Config para detectar configuraciones incorrectas y drift (con el paquete de conformidad de PCI DSS) y Security Hub en la cuenta Audit (paso <code>13</code>). El detalle se deja abierto a propósito.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Trazabilidad completa y hallazgos centralizados.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Costo de Config por elemento de configuración registrado.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Nada; el alcance de reglas se ajusta con el uso.</li>
+</ul>
+<hr />
+<h2>ADR-031: DR pilot light en una segunda región, sin DRS</h2>
+<h3>Contexto</h3>
+<p>Se asume RTO de 1 hora (por las dependencias entre sistemas) y RPO de 5 minutos. AWS Elastic Disaster Recovery (DRS) replica servidores con agente; no cubre ECS, Fargate, RDS ni OpenSearch, y AWS recomienda la copia entre regiones de RDS en lugar de DRS para RDS.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Pilot light: datos replicados siempre, cómputo creado al fallar.</li>
+<li>Warm standby: cómputo mínimo encendido en la segunda región.</li>
+<li>Activo-activo multirregión.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Pilot light por costo (paso <code>14</code>):</p>
+<ul>
+<li>Réplicas de RDS entre regiones (Aurora Global Database tras la modernización).</li>
+<li>Tabla global de DynamoDB y llave réplica de KMS para las wallets.</li>
+<li>Replicación de ECR.</li>
+<li>Los servicios de ECS, incluido Temporal, se crean con Terraform solo durante una conmutación.</li>
+</ul>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Cumple RPO de 5 minutos y RTO de 1 hora con el menor costo fijo.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>El RTO depende de que el <code>terraform apply</code> de la región de DR esté probado; hay que ensayarlo.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Un RTO cercano a cero: warm standby o activo-activo, con su costo.</li>
+</ul>
+<hr />
+<h2>ADR-032: No tocar la infraestructura blockchain</h2>
+<h3>Contexto</h3>
+<p>Se asume Stellar. No hay información de nodos propios ni de Horizon.</p>
+<h3>Decisión</h3>
+<p>No se toca la integración con la red blockchain. Lo único en alcance son las llaves de firma (ADR-021).</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Sin riesgo sobre la pieza más crítica y menos conocida.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Posibles mejoras (nodos propios, redundancia de proveedores RPC) quedan fuera.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Contexto sobre cómo se conecta Kova a Stellar hoy.</li>
+</ul>
+<hr />
+<h2>ADR-033: Reducción del alcance PCI con issuer-processor y segmentación</h2>
+<h3>Contexto</h3>
+<p>Kova emite tarjetas, así que aplica PCI DSS. El alcance es todo sistema que almacena, procesa o transmite datos de tarjeta, más lo conectado a ellos.</p>
+<h3>Opciones consideradas</h3>
+<ul>
+<li>Kova maneja los datos de tarjeta en su propia infraestructura.</li>
+<li>Un issuer-processor (tipo Pomelo, Marqeta o Galileo) guarda los datos de tarjeta y Kova solo tokens.</li>
+<li>Una cuenta dedicada para el entorno de datos de tarjeta.</li>
+</ul>
+<h3>Decisión</h3>
+<p>Issuer-processor más segmentación dentro de la cuenta de producción (paso <code>4</code>): los pocos servicios que hablan con el procesador quedan en su propia service network de Lattice, con políticas de IAM, security groups y etiquetas. Paquete de conformidad PCI DSS de AWS Config y el reporte de cumplimiento PCI de AWS (AWS Artifact) para la parte de responsabilidad compartida.</p>
+<h3>Consecuencias</h3>
+<h4>Positivas</h4>
+<ul>
+<li>Alcance PCI mínimo y nada se mueve.</li>
+</ul>
+<h4>Negativas</h4>
+<ul>
+<li>Dependencia del procesador.</li>
+</ul>
+<h3>Qué cambiaría la decisión</h3>
+<ul>
+<li>Que Kova necesite manejar datos de tarjeta directamente; se evaluaría una cuenta dedicada como paso de modernización.</li>
+</ul>
+</section>
+
+</body>
+</html>
